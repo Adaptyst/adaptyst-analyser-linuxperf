@@ -6,10 +6,6 @@ min_module_version: [0, 1, 0, 1]
 python_dependencies:
   - treelib
 
-js_dependencies:
-  - d3-flamegraph.min.js
-  - d3-flamegraph.css
-
 js_url_dependencies:
   - https://unpkg.com/function-plot/dist/function-plot.js
   - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js
@@ -18,3 +14,7 @@ js_url_dependencies:
   - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.css
   - https://unpkg.com/chroma-js/dist/chroma.min.cjs
   - https://d3js.org/d3.v7.min.js
+  - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph.min.js
+  - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph.css
+  - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph-tooltip.min.js
+  - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph-colorMapper.min.js
