@@ -1,0 +1,20 @@
+name: linuxperf
+version: 0.1.0-dev.2025.10a
+short_desc: CPU Linux-perf-based hardware module.
+min_module_version: [0, 1, 0, 1]
+
+python_dependencies:
+  - treelib
+
+js_dependencies:
+  - d3-flamegraph.min.js
+  - d3-flamegraph.css
+
+js_url_dependencies:
+  - https://unpkg.com/function-plot/dist/function-plot.js
+  - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css
+  - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.js
+  - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.css
+  - https://unpkg.com/chroma-js/dist/chroma.min.cjs
+  - https://d3js.org/d3.v7.min.js
