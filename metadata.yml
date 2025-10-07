@@ -9,6 +9,7 @@ python_dependencies:
 js_url_dependencies:
   - https://unpkg.com/function-plot/dist/function-plot.js
   - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.9.0/highlightjs-line-numbers.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css
   - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.js
   - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.css
