@@ -1315,7 +1315,7 @@ class FlameGraphWindow extends Window {
         }
 
         this.downloadSvg('flamegraph_svg',
-                         '/static/d3-flamegraph.css');
+                         Window.getDepsPath() + '/d3-flamegraph.css');
     }
 }
 
