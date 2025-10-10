@@ -467,30 +467,23 @@ class TimelineWindow extends Window {
             });
         }
 
-        $.ajax({
-            url: this.getSession().id + '/' + this.getEntityId() + '/' + this.getNodeId() + '/' + MODULE_NAME,
-            method: 'POST',
-            dataType: 'json',
-            data: {thread_tree: true}
-        }).done(ajax_obj => {
-            this._data = ajax_obj;
-            $.ajax({
-                url: this.getSession().id + '/' + this.getEntityId() + '/' + this.getNodeId() + '/' + MODULE_NAME,
-                method: 'POST',
-                dataType: 'json',
-                data: {callchain: true}
-            }).done(ajax_obj => {
-                this.callchain_obj = ajax_obj;
-                part2();
-            }).fail(ajax_obj => {
-                alert('Could not obtain the callchain mappings! You ' +
-                      'will not get meaningful names when checking ' +
-                      'any stack traces.');
-                part2();
-            });
-        }).fail(ajax_obj => {
-            alert('Could not download the node data!');
-        });
+        this.sendRequest({thread_tree: true},
+                         result => {
+                             this._data = result;
+                             this.sendRequest({callchain: true},
+                                              result => {
+                                                  this.callchain_obj = result;
+                                                  part2();
+                                              },
+                                              (xhr, status, error) => {
+                                                  window.alert('Could not obtain the callchain mappings! You ' +
+                                                               'will not get meaningful names when checking ' +
+                                                               'any stack traces.');
+                                                  part2();
+                                              });
+                         }, (xhr, status, error) => {
+                             window.alert('Could not download the node data!');
+                         });
     }
 
     onGeneralAnalysesClick(event) {
@@ -715,36 +708,33 @@ class FlameGraphWindow extends Window {
         } else {
             let pid_tid = data.timeline_group_id.split('_');
 
-            $.ajax({
-                url: this.getSession().id + '/' + this.getEntityId() + '/' + this.getNodeId() + '/' + MODULE_NAME,
-                method: 'POST',
-                dataType: 'json',
-                data: {pid: pid_tid[0], tid: pid_tid[1],
-                       threshold: 1.0 * parseFloat($(
-                           '#threshold_input').val()) / 100}
-            }).done(ajax_obj => {
-                this.root_window.getData().result_cache[
-                    data.timeline_group_id + '_' + parseFloat($(
-                        '#threshold_input').val())] = ajax_obj;
-                this.getData().result_obj = ajax_obj;
+            this.sendRequest({pid: pid_tid[0],
+                              tid: pid_tid[1],
+                              threshold: 1.0 * parseFloat($(
+                                  '#threshold_input').val()) / 100},
+                             result => {
+                                 this.root_window.getData().result_cache[
+                                     data.timeline_group_id + '_' + parseFloat($(
+                                         '#threshold_input').val())] = result;
+                                 this.getData().result_obj = result;
 
-                if (!(metric in this.getData().result_obj)) {
-                    this.getData().flamegraph_obj = undefined;
-                    this.getContent().find('.flamegraph_svg').hide();
-                    this.getContent().find('.flamegraph_search').val('');
-                    this.getContent().find('.no_flamegraph').show();
-                } else {
-                    this.openFlameGraph(metric);
-                }
+                                 if (!(metric in this.getData().result_obj)) {
+                                     this.getData().flamegraph_obj = undefined;
+                                     this.getContent().find('.flamegraph_svg').hide();
+                                     this.getContent().find('.flamegraph_search').val('');
+                                     this.getContent().find('.no_flamegraph').show();
+                                 } else {
+                                     this.openFlameGraph(metric);
+                                 }
 
-                this.hideLoading();
-            }).fail(ajax_obj => {
-                this.getData().flamegraph_obj = undefined;
-                this.getContent().find('.flamegraph_svg').hide();
-                this.getContent().find('.flamegraph_search').val('');
-                this.getContent().find('.no_flamegraph').show();
-                this.hideLoading();
-            });
+                                 this.hideLoading();
+                             }, (xhr, status, error) => {
+                                 this.getData().flamegraph_obj = undefined;
+                                 this.getContent().find('.flamegraph_svg').hide();
+                                 this.getContent().find('.flamegraph_search').val('');
+                                 this.getContent().find('.no_flamegraph').show();
+                                 this.hideLoading();
+                             });
         }
     }
 
@@ -1467,21 +1457,17 @@ class RooflineWindow extends Window {
             this.openRooflinePlot();
             this.hideLoading();
         } else {
-            $.ajax({
-                url: this.getSession().id + '/' + this.getEntityId() + '/' + this.getNodeId() + '/' + MODULE_NAME,
-                method: 'POST',
-                dataType: 'json',
-                data: {general_analysis: 'roofline'}
-            }).done(ajax_obj => {
-                this.root_window.getData().result_cache['roofline'] = ajax_obj;
-                this.getData().roofline = ajax_obj;
-                this.openRooflinePlot();
-                this.hideLoading();
-            }).fail(ajax_obj => {
-                window.alert('Could not load the roofline model!');
-                this.hideLoading();
-                this.close();
-            });
+            this.sendRequest({general_analysis: 'roofline'},
+                             result => {
+                                 this.root_window.getData().result_cache['roofline'] = result;
+                                 this.getData().roofline = result;
+                                 this.openRooflinePlot();
+                                 this.hideLoading();
+                             }, (xhr, status, error) => {
+                                 window.alert('Could not load the roofline model!');
+                                 this.hideLoading();
+                                 this.close();
+                             });
         }
     }
 
@@ -1810,17 +1796,14 @@ class CodeWindow extends Window {
         if (default_path in root_window.getData().src_cache) {
             load(root_window.getData().src_cache[default_path]);
         } else {
-            $.ajax({
-                url: session.id + '/' + entity_id + '/' + node_id + '/' + MODULE_NAME,
-                method: 'POST',
-                dataType: 'text',
-                data: {src: root_window.getData().src_index_dict[default_path]}
-            }).done(src_code => {
-                root_window.getData().src_cache[default_path] = src_code;
-                load(src_code);
-            }).fail(ajax_obj => {
-                window.alert('Could not load ' + default_path + '!');
-            });
+            session.sendRequest(entity_id, node_id, MODULE_NAME,
+                                {src: root_window.getData().src_index_dict[default_path]},
+                                src_code => {
+                                    root_window.getData().src_cache[default_path] = src_code;
+                                    load(src_code);
+                                }, (xhr, status, error) => {
+                                    window.alert('Could not load ' + default_path + '!');
+                                }, 'text');
         }
     }
 
@@ -1905,17 +1888,13 @@ class CodeWindow extends Window {
         if (path in this.root_window.getData().src_cache) {
             load(this.root_window.getData().src_cache[path]);
         } else {
-            $.ajax({
-                url: this.getSession().id + '/' + this.getEntityId() + '/' + this.getNodeId() + '/' + MODULE_NAME,
-                method: 'POST',
-                dataType: 'text',
-                data: {src: this.root_window.getData().src_index_dict[path]}
-            }).done(src_code => {
-                this.root_window.getData().src_cache[path] = src_code;
-                load(src_code);
-            }).fail(ajax_obj => {
-                window.alert('Could not load ' + path + '!');
-            });
+            this.sendRequest({src: this.root_window.getData().src_index_dict[path]},
+                              src_code => {
+                                  this.root_window.getData().src_cache[path] = src_code;
+                                  load(src_code);
+                              }, (xhr, status, error) => {
+                                  window.alert('Could not load ' + path + '!');
+                              }, 'text');
         }
     }
 
