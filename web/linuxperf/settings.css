@@ -1,7 +1,7 @@
-#threshold_input, #runtime_diff_threshold_input {
+#linuxperf_threshold_input, #linuxperf_runtime_diff_threshold_input {
     width:70px;
 }
 
-#off_cpu_scale {
+#linuxperf_off_cpu_scale {
     width:250px;
 }

@@ -109,7 +109,7 @@ class TimelineWindow extends Window {
             sampled_diff_dict[item.id] = sampled_diff;
             let warning =
                 sampled_diff > 1.0 * parseFloat(
-                    $('#runtime_diff_threshold_input').val()) / 100;
+                    $('#linuxperf_runtime_diff_threshold_input').val()) / 100;
 
             let group = {
                 id: json.id,
@@ -185,7 +185,7 @@ class TimelineWindow extends Window {
                 callchain_dict[item.id] = json.start_callchain;
             }
 
-            let offcpu_sampling_raw = parseFloat($('#off_cpu_scale').val());
+            let offcpu_sampling_raw = parseFloat($('#linuxperf_off_cpu_scale').val());
 
             if (offcpu_sampling_raw > 0) {
                 if (offcpu_sampling_raw < 1) {
@@ -281,7 +281,7 @@ class TimelineWindow extends Window {
             } else if (this.getData().offcpu_sampling > 0) {
                 this.getContent().find('.off_cpu_sampling_period').text(this.getData().offcpu_sampling);
                 this.getContent().find('.off_cpu_scale_value').text(
-                    $('#off_cpu_scale').val());
+                    $('#linuxperf_off_cpu_scale').val());
                 this.getContent().find('.off_cpu_sampling_warning').show();
             }
 
@@ -387,12 +387,12 @@ class TimelineWindow extends Window {
                     }
 
                     if (sampled_diff_dict[props.group] >
-                        1.0 * parseFloat($('#runtime_diff_threshold_input').val()) / 100) {
+                        1.0 * parseFloat($('#linuxperf_runtime_diff_threshold_input').val()) / 100) {
                         items[0].item.find('.tooltip_sampled_runtime').css('color', 'red');
                         items[0].item.find('.sampled_diff').html(
                             (sampled_diff_dict[props.group] * 100).toFixed(2));
                         items[0].item.find('.runtime_diff_threshold').html(
-                            parseFloat($('#runtime_diff_threshold_input').val()));
+                            parseFloat($('#linuxperf_runtime_diff_threshold_input').val()));
                         items[0].item.find('.runtime_warning').show();
                     } else {
                         items[0].item.find('.tooltip_sampled_runtime').css('color', 'black');
@@ -459,7 +459,8 @@ class TimelineWindow extends Window {
                         items.push(last_item);
                     }
 
-                    Menu.createMenuWithCustomBlocks(props.pageX, props.pageY, items);
+                    Menu.createMenuWithCustomBlocks('linuxperf_timeline',
+                                                    props.pageX, props.pageY, items);
 
                     props.event.preventDefault();
                     props.event.stopPropagation();
@@ -511,7 +512,8 @@ class TimelineWindow extends Window {
                 hover: true});
         }
 
-        Menu.createMenuWithCustomBlocks(event.pageX, event.pageY, items);
+        Menu.createMenuWithCustomBlocks('linuxperf_general_analyses',
+                                        event.pageX, event.pageY, items);
 
         event.preventDefault();
         event.stopPropagation();
@@ -690,10 +692,10 @@ class FlameGraphWindow extends Window {
         this.getData().replacements = {};
 
         if (data.timeline_group_id + '_' +
-            parseFloat($('#threshold_input').val()) in this.root_window.getData().result_cache) {
+            parseFloat($('#linuxperf_threshold_input').val()) in this.root_window.getData().result_cache) {
             this.getData().result_obj = this.root_window.getData().result_cache[
                 data.timeline_group_id + '_' + parseFloat($(
-                    '#threshold_input').val())];
+                    '#linuxperf_threshold_input').val())];
 
             if (!(metric in this.getData().result_obj)) {
                 this.getData().flamegraph_obj = undefined;
@@ -711,11 +713,11 @@ class FlameGraphWindow extends Window {
             this.sendRequest({pid: pid_tid[0],
                               tid: pid_tid[1],
                               threshold: 1.0 * parseFloat($(
-                                  '#threshold_input').val()) / 100},
+                                  '#linuxperf_threshold_input').val()) / 100},
                              result => {
                                  this.root_window.getData().result_cache[
                                      data.timeline_group_id + '_' + parseFloat($(
-                                         '#threshold_input').val())] = result;
+                                         '#linuxperf_threshold_input').val())] = result;
                                  this.getData().result_obj = result;
 
                                  if (!(metric in this.getData().result_obj)) {
@@ -1099,7 +1101,8 @@ class FlameGraphWindow extends Window {
                 return;
             }
 
-            Menu.createMenu(event.pageX, event.pageY, options);
+            Menu.createMenu('linuxperf_flamegraph',
+                            event.pageX, event.pageY, options);
         });
         flamegraph_obj.setLabelHandler((node) => {
             let numf = new Intl.NumberFormat('en-US');
@@ -1217,7 +1220,8 @@ class FlameGraphWindow extends Window {
             return;
         }
 
-        Menu.createMenu(event.pageX, event.pageY, options);
+        Menu.createMenu('linuxperf_flamegraph_replace',
+                        event.pageX, event.pageY, options);
     }
 
     onReplacementClick(info) {
