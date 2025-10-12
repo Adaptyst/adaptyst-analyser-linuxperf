@@ -985,10 +985,10 @@ class FlameGraphWindow extends Window {
 
         for (const v of Object.values(Window.instances)) {
             if (v.getType() === 'linuxperf_roofline' &&
-                v.session.id === this.getSession().id &&
-                v.entity_id === this.getEntityId() &&
-                v.node_id === this.getNodeId()) {
-                v.dom.find('.roofline_point_select').append(
+                v.getSession().id === this.getSession().id &&
+                v.getEntityId() === this.getEntityId() &&
+                v.getNodeId() === this.getNodeId()) {
+                v.getContent().find('.roofline_point_select').append(
                     new Option(name, name));
                 v.updateRoofline();
             }
@@ -1201,7 +1201,7 @@ class FlameGraphWindow extends Window {
     }
 
     onFlameGraphReplaceRightClick(event) {
-        stopPropagation(event);
+        Window.stopPropagation(event);
 
         let options = [];
 
