@@ -583,7 +583,7 @@ class FlameGraphWindow extends Window {
 </div>
 <div class="flamegraph_search_results">
   <b>Search results:</b> <span class="flamegraph_search_blocks"></span> block(s) accounting for
-  <span class="flamegraph_search_found"></span> unit(s) out of
+  <span class="flamegraph_search_found"></span> <span class="flamegraph_search_unit"></span> out of
   <span class="flamegraph_search_total"></span> (<span class="flamegraph_search_percentage"></span>%)
 </div>
 </div>
@@ -1145,6 +1145,7 @@ class FlameGraphWindow extends Window {
         flamegraph_obj.setSearchHandler((results, sum, total) => {
             this.getContent().find('.flamegraph_search_blocks').html(results.length.toLocaleString());
             this.getContent().find('.flamegraph_search_found').html(sum.toLocaleString());
+            this.getContent().find('.flamegraph_search_unit').text(this.getData().metrics_dict[metric].unit);
             this.getContent().find('.flamegraph_search_total').html(this.getData().total.toLocaleString());
             this.getContent().find('.flamegraph_search_percentage').html(
                 (1.0 * sum / this.getData().total * 100).toFixed(2));
