@@ -1,3 +1,8 @@
+/*
+SPDX-FileCopyrightText: 2025 CERN
+SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
 #linuxperf_threshold_input, #linuxperf_runtime_diff_threshold_input {
     width:70px;
 }

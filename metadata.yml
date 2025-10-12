@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 CERN
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 name: linuxperf
 version: 0.1.0-dev.2025.10a
 short_desc: CPU Linux-perf-based hardware module.
