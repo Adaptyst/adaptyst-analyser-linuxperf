@@ -1960,8 +1960,8 @@ class CodeWindow extends Window {
                     } else {
                         num_elem.attr('title', numf.format(sum) + ' ' +
                                       how[7] + ' (' + (how[4] * 100).toFixed(2) + '% of the block)\n\n' +
-                                      'On-CPU: ' + (((1.0 * how[5]) / (1.0 * sum)) * 100).toFized(2) + '% of the line, ' + numf.format(how[5]) + ' ' + how[7] + '<br />' +
-                                      'Off-CPU: ' + (((1.0 * how[6]) / (1.0 * sum)) * 100).toFized(2) + '% of the line, ' + numf.format(how[6]) + ' ' + how[7]);
+                                      'On-CPU: ' + (((1.0 * how[5]) / (1.0 * sum)) * 100).toFixed(2) + '% of the line, ' + numf.format(how[5]) + ' ' + how[7] + '\n' +
+                                      'Off-CPU: ' + (((1.0 * how[6]) / (1.0 * sum)) * 100).toFixed(2) + '% of the line, ' + numf.format(how[6]) + ' ' + how[7]);
                     }
                 } else {
                     num_elem.attr('title', numf.format(how[5]) + ' ' +
