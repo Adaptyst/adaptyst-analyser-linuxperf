@@ -232,79 +232,16 @@ class LinuxPerfResults:
             data[p.parent.parent.name] = []
 
         # Untimed
-        def recurse_untimed(node, path):
-            with (path / 'dirmeta.json').open(mode='r') as f:
-                metadata = json.load(f)
-
-            node['name'] = path.name
-            node['offsets'] = defaultdict(lambda: {
-                'hot_value': 0,
-                'cold_value': 0
-            })
-
-            for key in metadata.keys():
-                if key in ['hot_value', 'cold_value']:
-                    node[key] = metadata[key]
-                elif key.startswith('hot_0x'):
-                    offset = re.search(r'^hot_(.+)$', key).group(1)
-                    node['offsets'][offset]['hot_value'] += metadata[key]
-                elif key.startswith('cold_0x'):
-                    offset = re.search(r'^cold_(.+)$', key).group(1)
-                    node['offsets'][offset]['cold_value'] += metadata[key]
-
-            node['value'] = node.get('hot_value', 0) + node.get('cold_value', 0)
-            node['children'] = []
-            for p in filter(Path.is_dir, path.glob('*')):
-                child = {}
-                node['children'].append(child)
-                recurse_untimed(child, p)
-
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'untimed' / 'all'
-            graph = {}
-            recurse_untimed(graph, start_path)
-            data[metric].append(graph)
+            start_path = self._path / metric / str(pid) / str(tid) / 'untimed.json'
+            with start_path.open(mode='r') as f:
+                data[metric].append(json.load(f))
 
         # Timed
-        def recurse_timed(node, path):
-            meta_path = path.parent / f'meta_{path.stem}.json'
-            with meta_path.open(mode='r') as f:
-                metadata = json.load(f)
-
-            node['offsets'] = defaultdict(lambda: {
-                'hot_value': 0,
-                'cold_value': 0
-            })
-
-            for k in metadata.keys():
-                if k in ['name', 'hot_value', 'cold_value']:
-                    node[k] = metadata[k]
-                elif k.startswith('hot_0x'):
-                    offset = re.search(r'^hot_(.+)$', k).group(1)
-                    node['offsets'][offset]['hot_value'] += metadata[k]
-                elif k.startswith('cold_0x'):
-                    offset = re.search(r'^cold_(.+)$', k).group(1)
-                    node['offsets'][offset]['cold_value'] += metadata[k]
-
-            node['value'] = node.get('hot_value', 0) + node.get('cold_value', 0)
-            node['children'] = []
-
-            with path.open(mode='r') as f:
-                for line in f:
-                    line = line.strip()
-
-                    if len(line) == 0:
-                        continue
-
-                    child = {}
-                    node['children'].append(child)
-                    recurse_timed(child, path.parent / f'{line}.dat')
-
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'timed' / 'all.dat'
-            graph = {}
-            recurse_timed(graph, start_path)
-            data[metric].append(graph)
+            start_path = self._path / metric / str(pid) / str(tid) / 'timed.json'
+            with start_path.open(mode='r') as f:
+                data[metric].append(json.load(f))
 
         # Processing
         for k, v in data.items():
