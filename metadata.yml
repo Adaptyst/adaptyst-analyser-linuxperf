@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: linuxperf
-version: 0.1.0-dev.2025.10a
+version: 0.1.0-dev.2025.11a
 short_desc: CPU Linux-perf-based hardware module.
 min_module_version: [0, 1, 0, 1]
 
