@@ -527,8 +527,8 @@ class TimelineWindow extends Window {
 
         if (analysis_type === 'roofline') {
             new RooflineWindow(this.getSession(), this.getEntityId(),
-                               this.getNodeId(), MODULE_NAME, this,
-                               event.pageX, event.pageY);
+                               this.getNodeId(), MODULE_NAME, undefined,
+                               event.pageX, event.pageY, [this]);
         }
     }
 
@@ -540,9 +540,8 @@ class TimelineWindow extends Window {
         if (analysis_type === 'flame_graphs') {
             new FlameGraphWindow(this.getSession(), this.getEntityId(),
                                  this.getNodeId(), MODULE_NAME, {
-                                     root_window: this,
                                      timeline_group_id: timeline_group_id
-                                 }, event.pageX, event.pageY);
+                                 }, event.pageX, event.pageY, [this]);
         }
     }
 }
@@ -636,7 +635,7 @@ class FlameGraphWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = data.root_window;
+        this.root_window = this.getDependencyObjects()[0];
         this.getContent().find('.flamegraph_time_ordered').attr(
             'id', this.getId() + '_time_ordered');
         this.getContent().find('.flamegraph_time_ordered_label').attr(
@@ -1417,7 +1416,7 @@ class RooflineWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = data;
+        this.root_window = this.getDependencyObjects()[0];
 
         this.getContent().find('.roofline_type_select').on(
             'change',
@@ -1792,11 +1791,10 @@ class CodeWindow extends Window {
                     data, default_path, session, entity_id, node_id) {
         let load = (code) => {
             new CodeWindow(session, entity_id, node_id, MODULE_NAME, {
-                root_window: root_window,
                 code: code,
                 files_and_lines: data,
                 default_file: default_path,
-            });
+            }, undefined, undefined, [root_window]);
             // new_window.css('top', 'calc(50% - 275px)');
             // new_window.css('left', 'calc(50% - 375px)');
         };
@@ -1863,7 +1861,7 @@ class CodeWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = data.root_window;
+        this.root_window = this.getDependencyObjects()[0];
         for (const f of Object.keys(data.files_and_lines)) {
             this.getContent().find('.code_file').append(
                 new Option(f, f));
@@ -1998,6 +1996,20 @@ function createRootWindow(entity_id, node_id, session) {
     return new TimelineWindow(session, entity_id, node_id, MODULE_NAME, {});
 }
 
+function getWindowClass(type) {
+    if (type === 'linuxperf_timeline') {
+        return TimelineWindow;
+    } else if (type === 'linuxperf_flamegraph') {
+        return FlameGraphWindow;
+    } else if (type === 'linuxperf_roofline') {
+        return RooflineWindow;
+    } else if (type === 'linuxperf_code') {
+        return CodeWindow;
+    } else {
+        return undefined;
+    }
+}
+
 function checkValidPercentage(event) {
     let input = event.target;
 
@@ -2030,4 +2042,4 @@ function insertValidPercentage(input) {
     }
 }
 
-export { createRootWindow };
+export { createRootWindow, getWindowClass };
