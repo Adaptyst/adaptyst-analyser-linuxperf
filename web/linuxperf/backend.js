@@ -2019,7 +2019,7 @@ function createRootWindow(entity_id, node_id, session) {
 function getWindowClass(type) {
     if (type === 'linuxperf_timeline') {
         return TimelineWindow;
-    } else if (type === 'linuxperf_flamegraph') {
+    } else if (type === 'linuxperf_flame_graph') {
         return FlameGraphWindow;
     } else if (type === 'linuxperf_roofline') {
         return RooflineWindow;
