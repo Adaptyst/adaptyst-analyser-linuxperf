@@ -4,6 +4,11 @@
 const MODULE_NAME = 'linuxperf';
 
 class TimelineWindow extends Window {
+    constructor(...args) {
+        super();
+        this.init(this, ...args);
+    }
+
     getType() {
         return 'linuxperf_timeline';
     }
@@ -63,25 +68,25 @@ class TimelineWindow extends Window {
 
     _setup(data, existing_window) {
         if (!existing_window) {
-            this.getData().offcpu_sampling = 0;
-            this.getData().show_no_off_cpu_warning = false;
-            this.getData().item_list = [];
-            this.getData().group_list = [];
-            this.getData().item_dict = {};
-            this.getData().callchain_dict = {};
-            this.getData().metrics_dict = {};
-            this.getData().tooltip_dict = {};
-            this.getData().warning_dict = {};
-            this.getData().general_metrics_dict = {};
-            this.getData().perf_maps_cache = {};
-            this.getData().result_cache = {};
-            this.getData().sampled_diff_dict = {};
-            this.getData().src_dict = {};
-            this.getData().src_index_dict = {};
-            this.getData().overall_end_time = [0];
-            this.getData().src_cache = {};
-            this.getData().roofline_dict = {};
-            this.getData().roofline_info = {};
+            this.inst().getData().offcpu_sampling = 0;
+            this.inst().getData().show_no_off_cpu_warning = false;
+            this.inst().getData().item_list = [];
+            this.inst().getData().group_list = [];
+            this.inst().getData().item_dict = {};
+            this.inst().getData().callchain_dict = {};
+            this.inst().getData().metrics_dict = {};
+            this.inst().getData().tooltip_dict = {};
+            this.inst().getData().warning_dict = {};
+            this.inst().getData().general_metrics_dict = {};
+            this.inst().getData().perf_maps_cache = {};
+            this.inst().getData().result_cache = {};
+            this.inst().getData().sampled_diff_dict = {};
+            this.inst().getData().src_dict = {};
+            this.inst().getData().src_index_dict = {};
+            this.inst().getData().overall_end_time = [0];
+            this.inst().getData().src_cache = {};
+            this.inst().getData().roofline_dict = {};
+            this.inst().getData().roofline_info = {};
         }
 
         let from_json_to_item = (json, level,
@@ -94,207 +99,207 @@ class TimelineWindow extends Window {
                                  src_dict, src_index_dict,
                                  roofline_info,
                                  max_off_cpu_sampling) => {
-            let item = {
-                id: json.id,
-                group: json.id,
-                type: 'background',
-                content: '',
-                start: json.start_time,
-                end: json.start_time + json.runtime,
-                style: 'background-color:#aa0000; z-index:-1'
-            };
+                                     let item = {
+                                         id: json.id,
+                                         group: json.id,
+                                         type: 'background',
+                                         content: '',
+                                         start: json.start_time,
+                                         end: json.start_time + json.runtime,
+                                         style: 'background-color:#aa0000; z-index:-1'
+                                     };
 
-            overall_end_time[0] = Math.max(overall_end_time[0],
-                                           json.start_time + json.runtime);
+                                     overall_end_time[0] = Math.max(overall_end_time[0],
+                                                                    json.start_time + json.runtime);
 
-            let sampled_diff = (1.0 * Math.abs(
-                json.runtime - json.sampled_time)) / json.runtime;
-            sampled_diff_dict[item.id] = sampled_diff;
-            let warning =
-                sampled_diff > 1.0 * parseFloat(
-                    $('#linuxperf_runtime_diff_threshold_input').val()) / 100;
+                                     let sampled_diff = (1.0 * Math.abs(
+                                         json.runtime - json.sampled_time)) / json.runtime;
+                                     sampled_diff_dict[item.id] = sampled_diff;
+                                     let warning =
+                                         sampled_diff > 1.0 * parseFloat(
+                                             $('#linuxperf_runtime_diff_threshold_input').val()) / 100;
 
-            let group = {
-                id: json.id,
-                content: json.name + ' (' + json.pid_tid + ')',
-                style: 'padding-left: ' + (level * 25) + 'px;',
-                showNested: false
-            };
+                                     let group = {
+                                         id: json.id,
+                                         content: json.name + ' (' + json.pid_tid + ')',
+                                         style: 'padding-left: ' + (level * 25) + 'px;',
+                                         showNested: false
+                                     };
 
-            let nestedGroups = [];
+                                     let nestedGroups = [];
 
-            for (let i = 0; i < json.children.length; i++) {
-                nestedGroups.push(json.children[i].id);
-            }
+                                     for (let i = 0; i < json.children.length; i++) {
+                                         nestedGroups.push(json.children[i].id);
+                                     }
 
-            if (nestedGroups.length > 0) {
-                group.nestedGroups = nestedGroups;
-            }
+                                     if (nestedGroups.length > 0) {
+                                         group.nestedGroups = nestedGroups;
+                                     }
 
-            item_list.push(item);
-            group_list.push(group);
+                                     item_list.push(item);
+                                     group_list.push(group);
 
-            let numf = new Intl.NumberFormat('en-US');
+                                     let numf = new Intl.NumberFormat('en-US');
 
-            json.runtime = json.runtime.toFixed(3);
-            json.sampled_time = json.sampled_time.toFixed(3);
+                                     json.runtime = json.runtime.toFixed(3);
+                                     json.sampled_time = json.sampled_time.toFixed(3);
 
-            let default_runtime;
-            let default_sampled_time;
-            let default_unit;
+                                     let default_runtime;
+                                     let default_sampled_time;
+                                     let default_unit;
 
-            if (json.runtime >= 1000 || json.sampled_time >= 1000) {
-                default_runtime = (json.runtime / 1000).toFixed(3);
-                default_sampled_time = (json.sampled_time / 1000).toFixed(3);
-                default_unit = 's';
-            } else {
-                default_runtime = json.runtime;
-                default_sampled_time = json.sampled_time;
-                default_unit = 'ms';
-            }
+                                     if (json.runtime >= 1000 || json.sampled_time >= 1000) {
+                                         default_runtime = (json.runtime / 1000).toFixed(3);
+                                         default_sampled_time = (json.sampled_time / 1000).toFixed(3);
+                                         default_unit = 's';
+                                     } else {
+                                         default_runtime = json.runtime;
+                                         default_sampled_time = json.sampled_time;
+                                         default_unit = 'ms';
+                                     }
 
-            item_dict[item.id] = json.name + ' (' + json.pid_tid + ')';
-            tooltip_dict[item.id] =
-                ['Runtime: ' +
-                 numf.format(default_runtime) +
-                 ' ' + default_unit + '<br /><span class="tooltip_sampled_runtime">' +
-                 '(sampled: ~' +
-                 numf.format(default_sampled_time) + ' ' + default_unit +
-                 ')</span>',
-                 'Runtime: ' +
-                 numf.format(json.runtime) +
-                 ' ms<br /><span class="tooltip_sampled_runtime">(sampled: ~' +
-                 numf.format(json.sampled_time) + ' ms)</span>'];
-            metrics_dict[item.id] = json.metrics;
-            warning_dict[item.id] = [warning, sampled_diff];
+                                     item_dict[item.id] = json.name + ' (' + json.pid_tid + ')';
+                                     tooltip_dict[item.id] =
+                                         ['Runtime: ' +
+                                          numf.format(default_runtime) +
+                                          ' ' + default_unit + '<br /><span class="tooltip_sampled_runtime">' +
+                                          '(sampled: ~' +
+                                          numf.format(default_sampled_time) + ' ' + default_unit +
+                                          ')</span>',
+                                          'Runtime: ' +
+                                          numf.format(json.runtime) +
+                                          ' ms<br /><span class="tooltip_sampled_runtime">(sampled: ~' +
+                                          numf.format(json.sampled_time) + ' ms)</span>'];
+                                     metrics_dict[item.id] = json.metrics;
+                                     warning_dict[item.id] = [warning, sampled_diff];
 
-            if ('general_metrics' in json && $.isEmptyObject(general_metrics_dict)) {
-                Object.assign(general_metrics_dict, json.general_metrics);
-            }
+                                     if ('general_metrics' in json && $.isEmptyObject(general_metrics_dict)) {
+                                         Object.assign(general_metrics_dict, json.general_metrics);
+                                     }
 
-            if ('src' in json && $.isEmptyObject(src_dict)) {
-                Object.assign(src_dict, json.src);
-            }
+                                     if ('src' in json && $.isEmptyObject(src_dict)) {
+                                         Object.assign(src_dict, json.src);
+                                     }
 
-            if ('src_index' in json && $.isEmptyObject(src_index_dict)) {
-                Object.assign(src_index_dict, json.src_index);
-            }
+                                     if ('src_index' in json && $.isEmptyObject(src_index_dict)) {
+                                         Object.assign(src_index_dict, json.src_index);
+                                     }
 
-            if ('roofline' in json && $.isEmptyObject(roofline_info)) {
-                Object.assign(roofline_info, json.roofline);
-            }
+                                     if ('roofline' in json && $.isEmptyObject(roofline_info)) {
+                                         Object.assign(roofline_info, json.roofline);
+                                     }
 
-            if (level > 0) {
-                callchain_dict[item.id] = json.start_callchain;
-            }
+                                     if (level > 0) {
+                                         callchain_dict[item.id] = json.start_callchain;
+                                     }
 
-            let offcpu_sampling_raw = parseFloat($('#linuxperf_off_cpu_scale').val());
+                                     let offcpu_sampling_raw = parseFloat($('#linuxperf_off_cpu_scale').val());
 
-            if (offcpu_sampling_raw > 0) {
-                if (offcpu_sampling_raw < 1) {
-                    if (level === 0) {
-                        max_off_cpu_sampling = json.runtime;
-                    }
+                                     if (offcpu_sampling_raw > 0) {
+                                         if (offcpu_sampling_raw < 1) {
+                                             if (level === 0) {
+                                                 max_off_cpu_sampling = json.runtime;
+                                             }
 
-                    if (max_off_cpu_sampling !== undefined) {
-                        this.getData().offcpu_sampling = Math.round(Math.pow(
-                            1 - offcpu_sampling_raw, 3) * max_off_cpu_sampling);
-                    }
-                }
+                                             if (max_off_cpu_sampling !== undefined) {
+                                                 this.inst().getData().offcpu_sampling = Math.round(Math.pow(
+                                                     1 - offcpu_sampling_raw, 3) * max_off_cpu_sampling);
+                                             }
+                                         }
 
-                for (let i = 0; i < json.off_cpu.length; i++) {
-                    let start = json.off_cpu[i][0];
-                    let end = start + json.off_cpu[i][1];
+                                         for (let i = 0; i < json.off_cpu.length; i++) {
+                                             let start = json.off_cpu[i][0];
+                                             let end = start + json.off_cpu[i][1];
 
-                    if (this.getData().offcpu_sampling === 0 ||
-                        start % this.getData().offcpu_sampling === 0 ||
-                        end % this.getData().offcpu_sampling === 0 ||
-                        Math.floor(start / this.getData().offcpu_sampling) != Math.floor(
-                            end / this.getData().offcpu_sampling)) {
-                        let off_cpu_item = {
-                            id: json.id + '_offcpu' + i,
-                            group: json.id,
-                            type: 'background',
-                            content: '',
-                            start: json.off_cpu[i][0],
-                            end: json.off_cpu[i][0] + json.off_cpu[i][1],
-                            style: 'background-color:#0294e3'
-                        };
+                                             if (this.inst().getData().offcpu_sampling === 0 ||
+                                                 start % this.inst().getData().offcpu_sampling === 0 ||
+                                                 end % this.inst().getData().offcpu_sampling === 0 ||
+                                                 Math.floor(start / this.inst().getData().offcpu_sampling) != Math.floor(
+                                                     end / this.inst().getData().offcpu_sampling)) {
+                                                 let off_cpu_item = {
+                                                     id: json.id + '_offcpu' + i,
+                                                     group: json.id,
+                                                     type: 'background',
+                                                     content: '',
+                                                     start: json.off_cpu[i][0],
+                                                     end: json.off_cpu[i][0] + json.off_cpu[i][1],
+                                                     style: 'background-color:#0294e3'
+                                                 };
 
-                        item_list.push(off_cpu_item);
-                    }
-                }
-            } else {
-                this.getData().show_no_off_cpu_warning = true;
-            }
+                                                 item_list.push(off_cpu_item);
+                                             }
+                                         }
+                                     } else {
+                                         this.inst().getData().show_no_off_cpu_warning = true;
+                                     }
 
-            for (let i = 0; i < json.children.length; i++) {
-                from_json_to_item(json.children[i],
-                                  level + 1,
-                                  item_list,
-                                  group_list,
-                                  item_dict,
-                                  metrics_dict,
-                                  callchain_dict,
-                                  tooltip_dict,
-                                  warning_dict,
-                                  overall_end_time,
-                                  general_metrics_dict,
-                                  sampled_diff_dict,
-                                  src_dict,
-                                  src_index_dict,
-                                  roofline_info,
-                                  max_off_cpu_sampling);
-            }
-        }
+                                     for (let i = 0; i < json.children.length; i++) {
+                                         from_json_to_item(json.children[i],
+                                                           level + 1,
+                                                           item_list,
+                                                           group_list,
+                                                           item_dict,
+                                                           metrics_dict,
+                                                           callchain_dict,
+                                                           tooltip_dict,
+                                                           warning_dict,
+                                                           overall_end_time,
+                                                           general_metrics_dict,
+                                                           sampled_diff_dict,
+                                                           src_dict,
+                                                           src_index_dict,
+                                                           roofline_info,
+                                                           max_off_cpu_sampling);
+                                     }
+                                 }
 
         let part2 = () => {
             if (!existing_window) {
-                from_json_to_item(this._data, 0,
-                                  this.getData().item_list,
-                                  this.getData().group_list,
-                                  this.getData().item_dict,
-                                  this.getData().metrics_dict,
-                                  this.getData().callchain_dict,
-                                  this.getData().tooltip_dict,
-                                  this.getData().warning_dict,
-                                  this.getData().overall_end_time,
-                                  this.getData().general_metrics_dict,
-                                  this.getData().sampled_diff_dict,
-                                  this.getData().src_dict,
-                                  this.getData().src_index_dict,
-                                  this.getData().roofline_info);
+                from_json_to_item(this.inst()._data, 0,
+                                  this.inst().getData().item_list,
+                                  this.inst().getData().group_list,
+                                  this.inst().getData().item_dict,
+                                  this.inst().getData().metrics_dict,
+                                  this.inst().getData().callchain_dict,
+                                  this.inst().getData().tooltip_dict,
+                                  this.inst().getData().warning_dict,
+                                  this.inst().getData().overall_end_time,
+                                  this.inst().getData().general_metrics_dict,
+                                  this.inst().getData().sampled_diff_dict,
+                                  this.inst().getData().src_dict,
+                                  this.inst().getData().src_index_dict,
+                                  this.inst().getData().roofline_info);
             }
 
-            if ($.isEmptyObject(this.getData().general_metrics_dict)) {
-                this.getContent().find('.general_analyses').off('click');
-                this.getContent().find('.general_analyses').attr('class', 'disabled');
+            if ($.isEmptyObject(this.inst().getData().general_metrics_dict)) {
+                this.inst().getContent().find('.general_analyses').off('click');
+                this.inst().getContent().find('.general_analyses').attr('class', 'disabled');
             } else {
-                this.getContent().find('.general_analyses').on('click', (event) => {
-                    this.onGeneralAnalysesClick(event);
+                this.inst().getContent().find('.general_analyses').on('click', (event) => {
+                    this.inst().onGeneralAnalysesClick(event);
                 });
-                this.getContent().find('.general_analyses').attr('class', 'pointer');
+                this.inst().getContent().find('.general_analyses').attr('class', 'pointer');
             }
 
-            let container = this.getContent().find('.linuxperf_timeline');
+            let container = this.inst().getContent().find('.linuxperf_timeline');
             container.html('');
 
-            if (this.getData().show_no_off_cpu_warning) {
-                this.getContent().find('.no_off_cpu_warning').show();
-            } else if (this.getData().offcpu_sampling > 0) {
-                this.getContent().find('.off_cpu_sampling_period').text(this.getData().offcpu_sampling);
-                this.getContent().find('.off_cpu_scale_value').text(
+            if (this.inst().getData().show_no_off_cpu_warning) {
+                this.inst().getContent().find('.no_off_cpu_warning').show();
+            } else if (this.inst().getData().offcpu_sampling > 0) {
+                this.inst().getContent().find('.off_cpu_sampling_period').text(this.inst().getData().offcpu_sampling);
+                this.inst().getContent().find('.off_cpu_scale_value').text(
                     $('#linuxperf_off_cpu_scale').val());
-                this.getContent().find('.off_cpu_sampling_warning').show();
+                this.inst().getContent().find('.off_cpu_sampling_warning').show();
             }
 
-            this.getContent().find('.glossary').show();
-            this.hideLoading();
+            this.inst().getContent().find('.glossary').show();
+            this.inst().hideLoading();
 
             let timeline = new vis.Timeline(
                 container[0],
-                this.getData().item_list,
-                this.getData().group_list,
+                this.inst().getData().item_list,
+                this.inst().getData().group_list,
                 {
                     format: {
                         minorLabels: {
@@ -311,24 +316,24 @@ class TimelineWindow extends Window {
                     },
                     showMajorLabels: false,
                     min: 0,
-                    max: 2 * this.getData().overall_end_time[0]
+                    max: 2 * this.inst().getData().overall_end_time[0]
                 }
             );
 
             timeline.on('contextmenu', (props) => {
                 if (props.group != null) {
-                    let item_list = this.getData().item_list;
-                    let group_list = this.getData().group_list;
-                    let item_dict = this.getData().item_dict;
-                    let callchain_dict = this.getData().callchain_dict;
-                    let callchain_obj = this.callchain_obj;
-                    let metrics_dict = this.getData().metrics_dict;
-                    let tooltip_dict = this.getData().tooltip_dict;
-                    let warning_dict = this.getData().warning_dict;
-                    let general_metrics_dict = this.getData().general_metrics_dict;
-                    let sampled_diff_dict = this.getData().sampled_diff_dict;
-                    let src_dict = this.getData().src_dict;
-                    let src_index_dict = this.getData().src_index_dict;
+                    let item_list = this.inst().getData().item_list;
+                    let group_list = this.inst().getData().group_list;
+                    let item_dict = this.inst().getData().item_dict;
+                    let callchain_dict = this.inst().getData().callchain_dict;
+                    let callchain_obj = this.inst().callchain_obj;
+                    let metrics_dict = this.inst().getData().metrics_dict;
+                    let tooltip_dict = this.inst().getData().tooltip_dict;
+                    let warning_dict = this.inst().getData().warning_dict;
+                    let general_metrics_dict = this.inst().getData().general_metrics_dict;
+                    let sampled_diff_dict = this.inst().getData().sampled_diff_dict;
+                    let src_dict = this.inst().getData().src_dict;
+                    let src_index_dict = this.inst().getData().src_index_dict;
 
                     let items = [
                         {
@@ -372,18 +377,18 @@ class TimelineWindow extends Window {
                                 items.push({
                                     item: $(`<div>Flame graphs</div>`),
                                     click_handler: [['flame_graphs',
-                                                     props.group, this],
+                                                     props.group, this.inst()],
                                                     event => {
-                                                        this.onMenuItemClick(event);
+                                                        this.inst().onMenuItemClick(event);
                                                     }],
                                     hover: true});
                             }
                         } else {
                             items.push({
                                 item: $(`<div>${v.title}</div>`),
-                                click_handler: [[k, props.group, this],
+                                click_handler: [[k, props.group, this.inst()],
                                                 event => {
-                                                    this.onMenuItemClick(event);
+                                                    this.inst().onMenuItemClick(event);
                                                 }],
                                 hover: true});
                         }
@@ -436,9 +441,9 @@ class TimelineWindow extends Window {
                                                 data[event.data.file][
                                                     event.data.line] = 'exact';
                                                 Menu.closeMenu();
-                                                CodeWindow.openCode(this, data, event.data.file,
-                                                                    this.getSession(), this.getEntityId(),
-                                                                    this.getNodeId());
+                                                CodeWindow.openCode(this.inst(), data, event.data.file,
+                                                                    this.inst().getSession(), this.inst().getEntityId(),
+                                                                    this.inst().getNodeId());
                                             });
                                     }
                                 } else {
@@ -471,29 +476,29 @@ class TimelineWindow extends Window {
             });
         }
 
-        this.sendRequest({thread_tree: true},
-                         result => {
-                             this._data = result;
-                             this.sendRequest({callchain: true},
-                                              result => {
-                                                  this.callchain_obj = result;
-                                                  part2();
-                                              },
-                                              (xhr, status, error) => {
-                                                  window.alert('Could not obtain the callchain mappings! You ' +
-                                                               'will not get meaningful names when checking ' +
-                                                               'any stack traces.');
-                                                  part2();
-                                              });
-                         }, (xhr, status, error) => {
-                             window.alert('Could not download the node data!');
-                         });
+        this.inst().sendRequest({thread_tree: true},
+                                result => {
+                                    this.inst()._data = result;
+                                    this.inst().sendRequest({callchain: true},
+                                                            result => {
+                                                                this.inst().callchain_obj = result;
+                                                                part2();
+                                                            },
+                                                            (xhr, status, error) => {
+                                                                window.alert('Could not obtain the callchain mappings! You ' +
+                                                                             'will not get meaningful names when checking ' +
+                                                                             'any stack traces.');
+                                                                part2();
+                                                            });
+                                }, (xhr, status, error) => {
+                                    window.alert('Could not download the node data!');
+                                });
     }
 
     onGeneralAnalysesClick(event) {
         Menu.closeMenu();
 
-        let metrics_dict = this.getData().general_metrics_dict;
+        let metrics_dict = this.inst().getData().general_metrics_dict;
 
         let items = [
             {
@@ -510,7 +515,7 @@ class TimelineWindow extends Window {
              ${v.title}
            </div>`),
                 click_handler: [k, (event) => {
-                    this.onGeneralAnalysisMenuItemClick(event);
+                    this.inst().onGeneralAnalysisMenuItemClick(event);
                 }],
                 hover: true});
         }
@@ -526,9 +531,9 @@ class TimelineWindow extends Window {
         let analysis_type = event.data.data;
 
         if (analysis_type === 'roofline') {
-            new RooflineWindow(this.getSession(), this.getEntityId(),
-                               this.getNodeId(), MODULE_NAME, undefined,
-                               event.pageX, event.pageY, [this]);
+            new RooflineWindow(this.inst().getSession(), this.inst().getEntityId(),
+                               this.inst().getNodeId(), MODULE_NAME, undefined,
+                               event.pageX, event.pageY, [this.inst()]);
         }
     }
 
@@ -538,15 +543,20 @@ class TimelineWindow extends Window {
         let parent = event.data.data[2];
 
         if (analysis_type === 'flame_graphs') {
-            new FlameGraphWindow(this.getSession(), this.getEntityId(),
-                                 this.getNodeId(), MODULE_NAME, {
+            new FlameGraphWindow(this.inst().getSession(), this.inst().getEntityId(),
+                                 this.inst().getNodeId(), MODULE_NAME, {
                                      timeline_group_id: timeline_group_id
-                                 }, event.pageX, event.pageY, [this]);
+                                 }, event.pageX, event.pageY, [this.inst()]);
         }
     }
 }
 
 class FlameGraphWindow extends Window {
+    constructor(...args) {
+        super();
+        this.init(this, ...args);
+    }
+
     getType() {
         return 'linuxperf_flame_graph';
     }
@@ -606,7 +616,7 @@ class FlameGraphWindow extends Window {
     }
 
     startResize() {
-        if (this.getData().flamegraph_obj !== undefined) {
+        if (this.inst().getData().flamegraph_obj !== undefined) {
             return true;
         }
 
@@ -614,14 +624,14 @@ class FlameGraphWindow extends Window {
     }
 
     finishResize() {
-        let flamegraph_obj = this.getData().flamegraph_obj;
-        flamegraph_obj.width(this.getContent().find('.flamegraph_svg').outerWidth());
+        let flamegraph_obj = this.inst().getData().flamegraph_obj;
+        flamegraph_obj.width(this.inst().getContent().find('.flamegraph_svg').outerWidth());
         flamegraph_obj.update();
     }
 
     prepareRefresh(data) {
-        data.metric = this.getContent().find('.flamegraph_metric').val();
-        data.time_ordered = this.getContent().find('.flamegraph_time_ordered').prop('checked');
+        data.metric = this.inst().getContent().find('.flamegraph_metric').val();
+        data.time_ordered = this.inst().getContent().find('.flamegraph_time_ordered').prop('checked');
     }
 
     getTitle() {
@@ -635,32 +645,32 @@ class FlameGraphWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = this.getDependencyObjects()[0];
-        this.getContent().find('.flamegraph_time_ordered').attr(
-            'id', this.getId() + '_time_ordered');
-        this.getContent().find('.flamegraph_time_ordered_label').attr(
-            'for', this.getContent().find('.flamegraph_time_ordered').attr('id'));
-        this.getContent().find('.flamegraph_search').on('input', () => {
-            this.onSearchQueryChange(this.getContent().find('.flamegraph_search').val());
+        this.inst().root_window = this.inst().getDependencyObjects()[0];
+        this.inst().getContent().find('.flamegraph_time_ordered').attr(
+            'id', this.inst().getId() + '_time_ordered');
+        this.inst().getContent().find('.flamegraph_time_ordered_label').attr(
+            'for', this.inst().getContent().find('.flamegraph_time_ordered').attr('id'));
+        this.inst().getContent().find('.flamegraph_search').on('input', () => {
+            this.inst().onSearchQueryChange(this.inst().getContent().find('.flamegraph_search').val());
         });
-        this.getContent().find('.flamegraph_time_ordered').on('change', (event) => {
-            this.onTimeOrderedChange(event);
+        this.inst().getContent().find('.flamegraph_time_ordered').on('change', (event) => {
+            this.inst().onTimeOrderedChange(event);
         });
-        this.getContent().find('.flamegraph_metric').on('change', (event) => {
-            this.onMetricChange(event);
+        this.inst().getContent().find('.flamegraph_metric').on('change', (event) => {
+            this.inst().onMetricChange(event);
         });
-        this.getContent().find('.flamegraph_download').on('click', () => {
-            this.downloadFlameGraph();
+        this.inst().getContent().find('.flamegraph_download').on('click', () => {
+            this.inst().downloadFlameGraph();
         });
-        this.getContent().find('.flamegraph_replace').on('click', () => {
-            this.onFlameGraphReplaceClick();
+        this.inst().getContent().find('.flamegraph_replace').on('click', () => {
+            this.inst().onFlameGraphReplaceClick();
         });
-        this.getContent().find('.flamegraph_replace').on('contextmenu', (event) => {
-            this.onFlameGraphReplaceRightClick(event);
+        this.inst().getContent().find('.flamegraph_replace').on('contextmenu', (event) => {
+            this.inst().onFlameGraphReplaceRightClick(event);
         });
 
         let to_remove = [];
-        this.getContent().find('.flamegraph_metric > option').each(() => {
+        this.inst().getContent().find('.flamegraph_metric > option').each(() => {
             if (!this.disabled) {
                 to_remove.push($(this));
             }
@@ -670,13 +680,13 @@ class FlameGraphWindow extends Window {
             opt.remove();
         }
 
-        this.getData().metrics_dict = this.root_window.getData().metrics_dict[data.timeline_group_id];
+        this.inst().getData().metrics_dict = this.inst().root_window.getData().metrics_dict[data.timeline_group_id];
         let show_carm_checked = $('#show_carm').prop('checked');
         let target_metric_present = false;
-        for (const [k, v] of Object.entries(this.getData().metrics_dict)) {
+        for (const [k, v] of Object.entries(this.inst().getData().metrics_dict)) {
             if (show_carm_checked ||
                 !v.title.startsWith('CARM_')) {
-                this.getContent().find('.flamegraph_metric').append(
+                this.inst().getContent().find('.flamegraph_metric').append(
                     new Option(v.title, k));
 
                 if (k === data.metric) {
@@ -686,73 +696,73 @@ class FlameGraphWindow extends Window {
         }
 
         let metric = target_metric_present ? data.metric : 'walltime';
-        this.getContent().find('.flamegraph_metric').val(metric);
-        this.getContent().find('.flamegraph_time_ordered').prop(
+        this.inst().getContent().find('.flamegraph_metric').val(metric);
+        this.inst().getContent().find('.flamegraph_time_ordered').prop(
             'checked', data.time_ordered === undefined ? false : data.time_ordered);
-        this.getContent().find('.flamegraph').attr('data-id', data.timeline_group_id);
+        this.inst().getContent().find('.flamegraph').attr('data-id', data.timeline_group_id);
 
-        this.getData().replacements = {};
+        this.inst().getData().replacements = {};
 
         if (data.timeline_group_id + '_' +
-            parseFloat($('#linuxperf_threshold_input').val()) in this.root_window.getData().result_cache) {
-            this.getData().result_obj = this.root_window.getData().result_cache[
+            parseFloat($('#linuxperf_threshold_input').val()) in this.inst().root_window.getData().result_cache) {
+            this.inst().getData().result_obj = this.inst().root_window.getData().result_cache[
                 data.timeline_group_id + '_' + parseFloat($(
                     '#linuxperf_threshold_input').val())];
 
-            if (!(metric in this.getData().result_obj)) {
-                this.getData().flamegraph_obj = undefined;
-                this.getContent().find('.flamegraph_svg').hide();
-                this.getContent().find('.flamegraph_search').val('');
-                this.getContent().find('.no_flamegraph').show();
+            if (!(metric in this.inst().getData().result_obj)) {
+                this.inst().getData().flamegraph_obj = undefined;
+                this.inst().getContent().find('.flamegraph_svg').hide();
+                this.inst().getContent().find('.flamegraph_search').val('');
+                this.inst().getContent().find('.no_flamegraph').show();
             } else {
-                this.openFlameGraph(metric);
+                this.inst().openFlameGraph(metric);
             }
 
-            this.hideLoading();
+            this.inst().hideLoading();
         } else {
             let pid_tid = data.timeline_group_id.split('_');
 
-            this.sendRequest({pid: pid_tid[0],
-                              tid: pid_tid[1],
-                              threshold: 1.0 * parseFloat($(
-                                  '#linuxperf_threshold_input').val()) / 100},
-                             result => {
-                                 this.root_window.getData().result_cache[
-                                     data.timeline_group_id + '_' + parseFloat($(
-                                         '#linuxperf_threshold_input').val())] = result;
-                                 this.getData().result_obj = result;
+            this.inst().sendRequest({pid: pid_tid[0],
+                                     tid: pid_tid[1],
+                                     threshold: 1.0 * parseFloat($(
+                                         '#linuxperf_threshold_input').val()) / 100},
+                                    result => {
+                                        this.inst().root_window.getData().result_cache[
+                                            data.timeline_group_id + '_' + parseFloat($(
+                                                '#linuxperf_threshold_input').val())] = result;
+                                        this.inst().getData().result_obj = result;
 
-                                 if (!(metric in this.getData().result_obj)) {
-                                     this.getData().flamegraph_obj = undefined;
-                                     this.getContent().find('.flamegraph_svg').hide();
-                                     this.getContent().find('.flamegraph_search').val('');
-                                     this.getContent().find('.no_flamegraph').show();
-                                 } else {
-                                     this.openFlameGraph(metric);
-                                 }
+                                        if (!(metric in this.inst().getData().result_obj)) {
+                                            this.inst().getData().flamegraph_obj = undefined;
+                                            this.inst().getContent().find('.flamegraph_svg').hide();
+                                            this.inst().getContent().find('.flamegraph_search').val('');
+                                            this.inst().getContent().find('.no_flamegraph').show();
+                                        } else {
+                                            this.inst().openFlameGraph(metric);
+                                        }
 
-                                 this.hideLoading();
-                             }, (xhr, status, error) => {
-                                 this.getData().flamegraph_obj = undefined;
-                                 this.getContent().find('.flamegraph_svg').hide();
-                                 this.getContent().find('.flamegraph_search').val('');
-                                 this.getContent().find('.no_flamegraph').show();
-                                 this.hideLoading();
-                             });
+                                        this.inst().hideLoading();
+                                    }, (xhr, status, error) => {
+                                        this.inst().getData().flamegraph_obj = undefined;
+                                        this.inst().getContent().find('.flamegraph_svg').hide();
+                                        this.inst().getContent().find('.flamegraph_search').val('');
+                                        this.inst().getContent().find('.no_flamegraph').show();
+                                        this.inst().hideLoading();
+                                    });
         }
     }
 
     updateFlameGraph(data, always_change_height) {
-        let flamegraph_obj = this.getData().flamegraph_obj;
+        let flamegraph_obj = this.inst().getData().flamegraph_obj;
         if (flamegraph_obj !== undefined) {
             let update_height = () => {
-                let flamegraph_svg = this.getContent().find('.flamegraph_svg').children()[0];
+                let flamegraph_svg = this.inst().getContent().find('.flamegraph_svg').children()[0];
 
                 if (flamegraph_svg !== undefined) {
                     let target_height = flamegraph_svg.getBBox().height;
 
-                    if (always_change_height || target_height > this.getContent().find('.flamegraph_svg').outerHeight()) {
-                        this.getContent().find('.flamegraph_svg').height(target_height);
+                    if (always_change_height || target_height > this.inst().getContent().find('.flamegraph_svg').outerHeight()) {
+                        this.inst().getContent().find('.flamegraph_svg').height(target_height);
                         flamegraph_svg.setAttribute('height', target_height);
                     }
                 }
@@ -795,10 +805,10 @@ class FlameGraphWindow extends Window {
                                                         colour[1],
                                                         colour[2],
                                                         0, 0, 0,
-                                                        this.getData().metrics_dict[metric].unit];
+                                                        this.inst().getData().metrics_dict[metric].unit];
                 } else {
                     sums[decoded.file][decoded.line] = [metric, 0, 255, 0, 0, 0,
-                                                        this.getData().metrics_dict[metric].unit];
+                                                        this.inst().getData().metrics_dict[metric].unit];
                 }
             }
 
@@ -810,14 +820,14 @@ class FlameGraphWindow extends Window {
             }
         }
 
-        CodeWindow.openCode(this.root_window,
-                            sums, Object.keys(sums)[0], this.getSession(), this.getEntityId(),
-                            this.getNodeId());
+        CodeWindow.openCode(this.inst().root_window,
+                            sums, Object.keys(sums)[0], this.inst().getSession(), this.inst().getEntityId(),
+                            this.inst().getNodeId());
     }
 
     onAddToRooflineClick(event) {
-        let info = this.root_window.getData().roofline_info;
-        let result_obj = this.getData().result_obj;
+        let info = this.inst().root_window.getData().roofline_info;
+        let result_obj = this.inst().getData().result_obj;
         let exists = false;
         let name = "";
 
@@ -829,12 +839,12 @@ class FlameGraphWindow extends Window {
                 return;
             }
 
-            exists = name in this.root_window.getData().roofline_dict;
+            exists = name in this.inst().root_window.getData().roofline_dict;
         } while (exists);
 
         let trace = [];
         let node = event.data.data.node;
-        let cur_callchain_obj = this.root_window.callchain_obj[this.getContent().find('.flamegraph_metric').val()];
+        let cur_callchain_obj = this.inst().root_window.callchain_obj[this.inst().getContent().find('.flamegraph_metric').val()];
 
         while (node != undefined) {
             if (node.data.name in cur_callchain_obj) {
@@ -856,7 +866,7 @@ class FlameGraphWindow extends Window {
                 ai_nodes.push([undefined]);
             } else {
                 ai_nodes.push([result_obj[k][0],
-                               this.root_window.callchain_obj[k]]);
+                               this.inst().root_window.callchain_obj[k]]);
             }
         }
 
@@ -865,12 +875,12 @@ class FlameGraphWindow extends Window {
                 instr_nodes.push([undefined]);
             } else {
                 instr_nodes.push([result_obj[k][0],
-                                  this.root_window.callchain_obj[k]]);
+                                  this.inst().root_window.callchain_obj[k]]);
             }
         }
 
         let walltime_node = [[result_obj['walltime'][0],
-                              this.root_window.callchain_obj['walltime']]];
+                              this.inst().root_window.callchain_obj['walltime']]];
 
         let iterate = (arr, req_name) => {
             for (let i = 0; i < arr.length; i++) {
@@ -985,13 +995,13 @@ class FlameGraphWindow extends Window {
                                        8 * double_ratio));
         }
 
-        this.root_window.getData().roofline_dict[name] = [arith_intensity, flops];
+        this.inst().root_window.getData().roofline_dict[name] = [arith_intensity, flops];
 
         for (const v of Object.values(Window.instances)) {
             if (v.getType() === 'linuxperf_roofline' &&
-                v.getSession().id === this.getSession().id &&
-                v.getEntityId() === this.getEntityId() &&
-                v.getNodeId() === this.getNodeId()) {
+                v.getSession().id === this.inst().getSession().id &&
+                v.getEntityId() === this.inst().getEntityId() &&
+                v.getNodeId() === this.inst().getNodeId()) {
                 v.getContent().find('.roofline_point_select').append(
                     new Option(name, name));
                 v.updateRoofline();
@@ -1000,11 +1010,11 @@ class FlameGraphWindow extends Window {
     }
 
     openFlameGraph(metric) {
-        let result_obj = this.getData().result_obj;
-        this.getData().flamegraph_obj = flamegraph();
-        let flamegraph_obj = this.getData().flamegraph_obj;
+        let result_obj = this.inst().getData().result_obj;
+        this.inst().getData().flamegraph_obj = flamegraph();
+        let flamegraph_obj = this.inst().getData().flamegraph_obj;
         flamegraph_obj.inverted(true);
-        flamegraph_obj.sort(this.getContent().find('.flamegraph_time_ordered').prop('checked') ? false : true);
+        flamegraph_obj.sort(this.inst().getContent().find('.flamegraph_time_ordered').prop('checked') ? false : true);
         flamegraph_obj.color((node, original_color) => {
             if (node.highlight) {
                 return original_color;
@@ -1023,15 +1033,15 @@ class FlameGraphWindow extends Window {
         });
         flamegraph_obj.getName(node => {
             let result = undefined;
-            if (node.data.name in this.root_window.callchain_obj[this.getContent().find('.flamegraph_metric').val()]) {
-                let symbol = this.root_window.callchain_obj[this.getContent().find('.flamegraph_metric').val()][node.data.name];
+            if (node.data.name in this.inst().root_window.callchain_obj[this.inst().getContent().find('.flamegraph_metric').val()]) {
+                let symbol = this.inst().root_window.callchain_obj[this.inst().getContent().find('.flamegraph_metric').val()][node.data.name];
                 result = new String(symbol[0]);
             } else {
                 result = new String(node.data.name);
             }
 
             for (const [k, v] of Object.entries(
-                this.getData().replacements)) {
+                this.inst().getData().replacements)) {
                 result = result.replace(new RegExp(k), v);
             }
 
@@ -1054,7 +1064,7 @@ class FlameGraphWindow extends Window {
                 }
 
                 parent.children = new_children;
-                this.updateFlameGraph(d3.select('#' + this.getContent().find('.flamegraph_svg').attr('id')).datum().data, false);
+                this.inst().updateFlameGraph(d3.select('#' + this.inst().getContent().find('.flamegraph_svg').attr('id')).datum().data, false);
             }
         });
         flamegraph_obj.onContextMenu((event, node) => {
@@ -1062,20 +1072,20 @@ class FlameGraphWindow extends Window {
 
             let options = [];
 
-            if (!this.getContent().find('.flamegraph_time_ordered').prop('checked') &&
-                'roofline' in this.root_window.getData().general_metrics_dict) {
+            if (!this.inst().getContent().find('.flamegraph_time_ordered').prop('checked') &&
+                'roofline' in this.inst().root_window.getData().general_metrics_dict) {
                 options.push(['Add to the roofline plot', [{
                     'node': node,
-                    'window': this
+                    'window': this.inst()
                 }, (event) => {
-                    this.onAddToRooflineClick(event);
+                    this.inst().onAddToRooflineClick(event);
                 }]]);
             }
 
-            let symbol = this.root_window.callchain_obj[this.getContent().find('.flamegraph_metric').val()][node.data.name];
+            let symbol = this.inst().root_window.callchain_obj[this.inst().getContent().find('.flamegraph_metric').val()][node.data.name];
 
-            if (symbol !== undefined && this.root_window.getData().src_dict[symbol[1]] !== undefined) {
-                let offset_dict = this.root_window.getData().src_dict[symbol[1]];
+            if (symbol !== undefined && this.inst().root_window.getData().src_dict[symbol[1]] !== undefined) {
+                let offset_dict = this.inst().root_window.getData().src_dict[symbol[1]];
                 let code_available = false;
 
                 for (const addr of Object.keys(node.data.offsets)) {
@@ -1091,10 +1101,10 @@ class FlameGraphWindow extends Window {
                     options.push(['View the code details', [{
                         'offset_dict': offset_dict,
                         'node': node,
-                        'session': this.getSession(),
+                        'session': this.inst().getSession(),
                         'metric': metric
                     }, (event) => {
-                        this.onOpenCodeClick(event);
+                        this.inst().onOpenCodeClick(event);
                     }]]);
                 }
             }
@@ -1108,84 +1118,84 @@ class FlameGraphWindow extends Window {
         });
         flamegraph_obj.setLabelHandler((node) => {
             let numf = new Intl.NumberFormat('en-US');
-            let name = this.getData().flamegraph_obj.getName()(node).valueOf();
+            let name = this.inst().getData().flamegraph_obj.getName()(node).valueOf();
 
             if (metric === 'walltime' && name !== '(compressed)') {
                 if (node.data.hot_value === node.data.value) {
                     return name + ': ' + (100 * (node.x1 - node.x0)).toFixed(2) + '% of the entire execution time, ' + numf.format(node.data.value) + ' ' +
-                        this.getData().metrics_dict[metric].unit + '\n\nOn-CPU: 100.00% of the block, ' +
+                        this.inst().getData().metrics_dict[metric].unit + '\n\nOn-CPU: 100.00% of the block, ' +
                         numf.format(node.data.value) +
-                        ' ' + this.getData().metrics_dict[metric].unit;
+                        ' ' + this.inst().getData().metrics_dict[metric].unit;
                 } else if (node.data.cold_value === node.data.value) {
                     return name + ': ' + (100 * (node.x1 - node.x0)).toFixed(2) + '% of the entire execution time, ' + numf.format(node.data.value) + ' ' +
-                        this.getData().metrics_dict[metric].unit + '\n\nOff-CPU: 100.00% of the block, ' +
+                        this.inst().getData().metrics_dict[metric].unit + '\n\nOff-CPU: 100.00% of the block, ' +
                         numf.format(node.data.value) +
-                        ' ' + this.getData().metrics_dict[metric].unit;
+                        ' ' + this.inst().getData().metrics_dict[metric].unit;
                 } else {
                     return name + ': ' + (100 * (node.x1 - node.x0)).toFixed(2) + '% of the entire execution time, ' + numf.format(node.data.value) + ' ' +
-                        this.getData().metrics_dict[metric].unit + '\n\nOn-CPU: ' +
+                        this.inst().getData().metrics_dict[metric].unit + '\n\nOn-CPU: ' +
                         (100 * ((1.0 * node.data.hot_value) /
                                 (1.0 * node.data.value))).toFixed(2) + '% of the block, ' +
                         numf.format(node.data.hot_value) +
-                        ' ' + this.getData().metrics_dict[metric].unit + '\nOff-CPU: ' +
+                        ' ' + this.inst().getData().metrics_dict[metric].unit + '\nOff-CPU: ' +
                         (100 * ((1.0 * node.data.cold_value) /
                                 (1.0 * node.data.value))).toFixed(2) + '% of the block, ' +
                         numf.format(node.data.cold_value) + ' ' +
-                        this.getData().metrics_dict[metric].unit;
+                        this.inst().getData().metrics_dict[metric].unit;
                 }
             } else {
                 if (name === '(compressed)') {
                     return 'This block is compressed, click it to expand it.\n\n' +
-                    (100 * (node.x1 - node.x0)).toFixed(2) + '% overall, ' +
-                    numf.format(node.data.value) +
-                        ' ' + this.getData().metrics_dict[metric].unit;
+                        (100 * (node.x1 - node.x0)).toFixed(2) + '% overall, ' +
+                        numf.format(node.data.value) +
+                        ' ' + this.inst().getData().metrics_dict[metric].unit;
                 } else {
                     return name + ': ' +
-                    (100 * (node.x1 - node.x0)).toFixed(2) + '% overall, ' +
-                    numf.format(node.data.value) +
-                        ' ' + this.getData().metrics_dict[metric].unit;
+                        (100 * (node.x1 - node.x0)).toFixed(2) + '% overall, ' +
+                        numf.format(node.data.value) +
+                        ' ' + this.inst().getData().metrics_dict[metric].unit;
                 }
             }
         });
         flamegraph_obj.setSearchHandler((results, sum, total) => {
-            this.getContent().find('.flamegraph_search_blocks').html(results.length.toLocaleString());
-            this.getContent().find('.flamegraph_search_found').html(sum.toLocaleString());
-            this.getContent().find('.flamegraph_search_unit').text(this.getData().metrics_dict[metric].unit);
-            this.getContent().find('.flamegraph_search_total').html(this.getData().total.toLocaleString());
-            this.getContent().find('.flamegraph_search_percentage').html(
-                (1.0 * sum / this.getData().total * 100).toFixed(2));
+            this.inst().getContent().find('.flamegraph_search_blocks').html(results.length.toLocaleString());
+            this.inst().getContent().find('.flamegraph_search_found').html(sum.toLocaleString());
+            this.inst().getContent().find('.flamegraph_search_unit').text(this.inst().getData().metrics_dict[metric].unit);
+            this.inst().getContent().find('.flamegraph_search_total').html(this.inst().getData().total.toLocaleString());
+            this.inst().getContent().find('.flamegraph_search_percentage').html(
+                (1.0 * sum / this.inst().getData().total * 100).toFixed(2));
         });
 
         if (metric !== 'walltime') {
             flamegraph_obj.setColorHue('green');
         }
 
-        this.getContent().find('.no_flamegraph').hide();
-        this.getContent().find('.flamegraph_svg').html('');
-        this.getContent().find('.flamegraph_search').val('');
-        this.getContent().find('.flamegraph_search_results').hide();
-        this.getContent().find('.flamegraph_svg').attr(
-            'id', this.getId() + '_flamegraph_svg');
-        this.getContent().find('.flamegraph_svg').show();
-        flamegraph_obj.width(this.getContent().find('.flamegraph').outerWidth());
-        d3.select('#' + this.getContent().find('.flamegraph_svg').attr('id')).datum(structuredClone(
+        this.inst().getContent().find('.no_flamegraph').hide();
+        this.inst().getContent().find('.flamegraph_svg').html('');
+        this.inst().getContent().find('.flamegraph_search').val('');
+        this.inst().getContent().find('.flamegraph_search_results').hide();
+        this.inst().getContent().find('.flamegraph_svg').attr(
+            'id', this.inst().getId() + '_flamegraph_svg');
+        this.inst().getContent().find('.flamegraph_svg').show();
+        flamegraph_obj.width(this.inst().getContent().find('.flamegraph').outerWidth());
+        d3.select('#' + this.inst().getContent().find('.flamegraph_svg').attr('id')).datum(structuredClone(
             result_obj[metric][
-                this.getContent().find('.flamegraph_time_ordered').prop('checked') ? 1 : 0])).call(
+                this.inst().getContent().find('.flamegraph_time_ordered').prop('checked') ? 1 : 0])).call(
                     flamegraph_obj);
-        this.getData().total =
-            d3.select('#' + this.getContent().find('.flamegraph_svg').attr('id')).datum().data['value'];
-        this.updateFlameGraph(null, true);
-        flamegraph_obj.width(this.getContent().find('.flamegraph_svg').outerWidth());
+        this.inst().getData().total =
+            d3.select('#' + this.inst().getContent().find('.flamegraph_svg').attr('id')).datum().data['value'];
+        this.inst().updateFlameGraph(null, true);
+        flamegraph_obj.width(this.inst().getContent().find('.flamegraph_svg').outerWidth());
         flamegraph_obj.update();
 
-        this.getContent().find('.flamegraph')[0].scrollTop = 0;
+        this.inst().getContent().find('.flamegraph')[0].scrollTop = 0;
     }
 
     onFlameGraphReplaceClick() {
         let query = window.prompt(
             'Please enter a regular expression to be replaced in ' +
                 'the flame graph.',
-            this.getContent().find('.flamegraph_search').val());
+            this.inst().getContent().find('.flamegraph_search').val());
 
         if (query == undefined || query === "") {
             return;
@@ -1201,8 +1211,8 @@ class FlameGraphWindow extends Window {
             return;
         }
 
-        this.getData().replacements[query] = replacement;
-        this.getData().flamegraph_obj.update();
+        this.inst().getData().replacements[query] = replacement;
+        this.inst().getData().flamegraph_obj.update();
     }
 
     onFlameGraphReplaceRightClick(event) {
@@ -1211,10 +1221,10 @@ class FlameGraphWindow extends Window {
         let options = [];
 
         for (const [k, v] of Object.entries(
-            this.getData().replacements)) {
+            this.inst().getData().replacements)) {
             options.push([k + ' ==> ' + v, [{'query': k, 'replacement': v},
                                             (info) => {
-                                                this.onReplacementClick(info);
+                                                this.inst().onReplacementClick(info);
                                             }]]);
         }
 
@@ -1229,7 +1239,7 @@ class FlameGraphWindow extends Window {
     onReplacementClick(info) {
         let data = info.data.data;
 
-        let replacements = this.getData().replacements;
+        let replacements = this.inst().getData().replacements;
 
         let query = window.prompt(
             'Please enter a regular expression to be replaced in ' +
@@ -1243,7 +1253,7 @@ class FlameGraphWindow extends Window {
         if (query === "") {
             delete replacements[data.query];
             window.alert('The replacement has been removed!');
-            this.getData().flamegraph_obj.update();
+            this.inst().getData().flamegraph_obj.update();
             return;
         }
 
@@ -1258,48 +1268,48 @@ class FlameGraphWindow extends Window {
             return;
         }
 
-        this.getData().replacements[query] = replacement;
-        this.getData().flamegraph_obj.update();
+        this.inst().getData().replacements[query] = replacement;
+        this.inst().getData().flamegraph_obj.update();
     }
 
     onMetricChange(event) {
-        let result_obj = this.getData().result_obj;
+        let result_obj = this.inst().getData().result_obj;
         let metric = event.currentTarget.value;
 
-        this.getData().flamegraph_obj = undefined;
-        this.getContent().find('.flamegraph_time_ordered').prop('checked', false);
+        this.inst().getData().flamegraph_obj = undefined;
+        this.inst().getContent().find('.flamegraph_time_ordered').prop('checked', false);
 
         if (metric in result_obj) {
-            this.openFlameGraph(metric);
+            this.inst().openFlameGraph(metric);
         } else {
-            this.getContent().find('.flamegraph_search').val('');
-            this.getContent().find('.flamegraph_search_results').hide();
-            this.getContent().find('.flamegraph_svg').hide();
-            this.getContent().find('.no_flamegraph').show();
+            this.inst().getContent().find('.flamegraph_search').val('');
+            this.inst().getContent().find('.flamegraph_search_results').hide();
+            this.inst().getContent().find('.flamegraph_svg').hide();
+            this.inst().getContent().find('.no_flamegraph').show();
         }
     }
 
     onTimeOrderedChange(event) {
-        let flamegraph_obj = this.getData().flamegraph_obj;
-        let result_obj = this.getData().result_obj;
+        let flamegraph_obj = this.inst().getData().flamegraph_obj;
+        let result_obj = this.inst().getData().result_obj;
         if (flamegraph_obj !== undefined) {
             flamegraph_obj.sort(!event.currentTarget.checked);
-            this.updateFlameGraph(structuredClone(
-                result_obj[this.getContent().find('.flamegraph_metric').val()][
+            this.inst().updateFlameGraph(structuredClone(
+                result_obj[this.inst().getContent().find('.flamegraph_metric').val()][
                     event.currentTarget.checked ? 1 : 0]), true);
 
-            this.getContent().find('.flamegraph_search').val('');
-            this.getContent().find('.flamegraph_search_results').hide();
+            this.inst().getContent().find('.flamegraph_search').val('');
+            this.inst().getContent().find('.flamegraph_search_results').hide();
         }
     }
 
     onSearchQueryChange(value) {
-        let flamegraph_obj = this.getData().flamegraph_obj;
+        let flamegraph_obj = this.inst().getData().flamegraph_obj;
         if (flamegraph_obj !== undefined) {
             if (value === undefined || value === "") {
-                this.getContent().find('.flamegraph_search_results').hide();
+                this.inst().getContent().find('.flamegraph_search_results').hide();
             } else {
-                this.getContent().find('.flamegraph_search_results').show();
+                this.inst().getContent().find('.flamegraph_search_results').show();
             }
 
             flamegraph_obj.search(value);
@@ -1307,16 +1317,21 @@ class FlameGraphWindow extends Window {
     }
 
     downloadFlameGraph() {
-        if (this.getData().flamegraph_obj === undefined) {
+        if (this.inst().getData().flamegraph_obj === undefined) {
             return;
         }
 
-        this.downloadSvg('flamegraph_svg',
-                         Window.getDepsPath() + '/d3-flamegraph.css');
+        this.inst().downloadSvg('flamegraph_svg',
+                                Window.getDepsPath() + '/d3-flamegraph.css');
     }
 }
 
 class RooflineWindow extends Window {
+    constructor(...args) {
+        super();
+        this.init(this, ...args);
+    }
+
     getType() {
         return 'linuxperf_roofline';
     }
@@ -1387,18 +1402,18 @@ class RooflineWindow extends Window {
     }
 
     startResize() {
-        this.getContent().find('.roofline').html('');
+        this.inst().getContent().find('.roofline').html('');
         return true;
     }
 
     finishResize() {
-        if (this.getData().roofline.plot_config !== undefined &&
-            this.getContent().find('.roofline_type_select').val() != null) {
-            this.getContent().find('.roofline').html('');
+        if (this.inst().getData().roofline.plot_config !== undefined &&
+            this.inst().getContent().find('.roofline_type_select').val() != null) {
+            this.inst().getContent().find('.roofline').html('');
 
-            let plot_config = this.getData().roofline.plot_config;
-            plot_config.width = this.getContent().find('.roofline').outerWidth() - 10;
-            plot_config.height = this.getContent().find('.roofline').outerHeight() - 10;
+            let plot_config = this.inst().getData().roofline.plot_config;
+            plot_config.width = this.inst().getContent().find('.roofline').outerWidth() - 10;
+            plot_config.height = this.inst().getContent().find('.roofline').outerHeight() - 10;
             functionPlot(plot_config);
         }
     }
@@ -1416,84 +1431,84 @@ class RooflineWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = this.getDependencyObjects()[0];
+        this.inst().root_window = this.inst().getDependencyObjects()[0];
 
-        this.getContent().find('.roofline_type_select').on(
+        this.inst().getContent().find('.roofline_type_select').on(
             'change',
             (event) => {
-                this.onRooflineTypeChange(event);
+                this.inst().onRooflineTypeChange(event);
             });
-        this.getContent().find('.roofline_l1').on(
+        this.inst().getContent().find('.roofline_l1').on(
             'click',
             () => {
-                this.onRooflineBoundsChange('l1');
+                this.inst().onRooflineBoundsChange('l1');
             });
-        this.getContent().find('.roofline_l2').on(
+        this.inst().getContent().find('.roofline_l2').on(
             'click',
             () => {
-                this.onRooflineBoundsChange('l2');
+                this.inst().onRooflineBoundsChange('l2');
             });
-        this.getContent().find('.roofline_l3').on(
+        this.inst().getContent().find('.roofline_l3').on(
             'click',
             () => {
-                this.onRooflineBoundsChange('l3');
+                this.inst().onRooflineBoundsChange('l3');
             });
-        this.getContent().find('.roofline_dram').on(
+        this.inst().getContent().find('.roofline_dram').on(
             'click',
             () => {
-                this.onRooflineBoundsChange('dram');
+                this.inst().onRooflineBoundsChange('dram');
             });
-        this.getContent().find('.roofline_fp').on(
+        this.inst().getContent().find('.roofline_fp').on(
             'click',
             () => {
-                this.onRooflineBoundsChange('fp');
+                this.inst().onRooflineBoundsChange('fp');
             });
-        this.getContent().find('.roofline_point_delete').on(
+        this.inst().getContent().find('.roofline_point_delete').on(
             'click',
             (event) => {
-                this.onRooflinePointDeleteClick(event);
+                this.inst().onRooflinePointDeleteClick(event);
             });
-        this.getContent().find('.roofline_point_select').on(
+        this.inst().getContent().find('.roofline_point_select').on(
             'change',
             (event) => {
-                this.onRooflinePointChange(event);
+                this.inst().onRooflinePointChange(event);
             });
 
-        if ('roofline' in this.root_window.getData().result_cache) {
-            this.getData().roofline = this.root_window.getData().result_cache['roofline'];
-            this.openRooflinePlot();
-            this.hideLoading();
+        if ('roofline' in this.inst().root_window.getData().result_cache) {
+            this.inst().getData().roofline = this.inst().root_window.getData().result_cache['roofline'];
+            this.inst().openRooflinePlot();
+            this.inst().hideLoading();
         } else {
-            this.sendRequest({general_analysis: 'roofline'},
-                             result => {
-                                 this.root_window.getData().result_cache['roofline'] = result;
-                                 this.getData().roofline = result;
-                                 this.openRooflinePlot();
-                                 this.hideLoading();
-                             }, (xhr, status, error) => {
-                                 window.alert('Could not load the roofline model!');
-                                 this.hideLoading();
-                                 this.close();
-                             });
+            this.inst().sendRequest({general_analysis: 'roofline'},
+                                    result => {
+                                        this.inst().root_window.getData().result_cache['roofline'] = result;
+                                        this.inst().getData().roofline = result;
+                                        this.inst().openRooflinePlot();
+                                        this.inst().hideLoading();
+                                    }, (xhr, status, error) => {
+                                        window.alert('Could not load the roofline model!');
+                                        this.inst().hideLoading();
+                                        this.inst().close();
+                                    });
         }
     }
 
     openRooflinePlot() {
-        for (let i = 0; i < this.getData().roofline.models.length; i++) {
-            this.getContent().find('.roofline_type_select').append(
-                new Option(this.getData().roofline.models[i].isa, i));
+        for (let i = 0; i < this.inst().getData().roofline.models.length; i++) {
+            this.inst().getContent().find('.roofline_type_select').append(
+                new Option(this.inst().getData().roofline.models[i].isa, i));
         }
 
-        for (const k of Object.keys(this.root_window.getData().roofline_dict)) {
-            this.getContent().find('.roofline_point_select').append(
+        for (const k of Object.keys(this.inst().root_window.getData().roofline_dict)) {
+            this.inst().getContent().find('.roofline_point_select').append(
                 new Option(k, k));
         }
 
-        let plot_container = this.getContent().find('.roofline');
-        let plot_id = this.getId() + '_roofline';
+        let plot_container = this.inst().getContent().find('.roofline');
+        let plot_id = this.inst().getId() + '_roofline';
         plot_container.attr('id', plot_id);
 
-        this.getData().roofline.bounds = {
+        this.inst().getData().roofline.bounds = {
             'l1': true,
             'l2': true,
             'l3': true,
@@ -1503,7 +1518,7 @@ class RooflineWindow extends Window {
     }
 
     onRooflinePointDeleteClick(event) {
-        let cur_val = this.getContent().find('.roofline_point_select').val();
+        let cur_val = this.inst().getContent().find('.roofline_point_select').val();
 
         if (cur_val !== '' && cur_val != undefined) {
             let confirmed = window.confirm('Are you sure you want to ' +
@@ -1514,15 +1529,15 @@ class RooflineWindow extends Window {
                 return;
             }
 
-            this.getContent().find('.roofline_point_select').val('');
-            this.getContent().find('.roofline_point_ai').html('<i>Select first.</i>');
-            this.getContent().find('.roofline_point_perf').html('<i>Select first.</i>');
-            this.getContent().find(
+            this.inst().getContent().find('.roofline_point_select').val('');
+            this.inst().getContent().find('.roofline_point_ai').html('<i>Select first.</i>');
+            this.inst().getContent().find('.roofline_point_perf').html('<i>Select first.</i>');
+            this.inst().getContent().find(
                 '.roofline_point_select option[value="' + cur_val + '"]').remove()
 
-            delete this.root_window.getData().roofline_dict[cur_val];
+            delete this.inst().root_window.getData().roofline_dict[cur_val];
 
-            this.updateRoofline();
+            this.inst().updateRoofline();
         }
     }
 
@@ -1530,76 +1545,76 @@ class RooflineWindow extends Window {
         let new_val = event.target.value;
 
         if (new_val === '' || new_val == undefined) {
-            this.getContent().find('.roofline_point_ai').html('<i>Select first.</i>');
-            this.getContent().find('.roofline_point_perf').html('<i>Select first.</i>');
+            this.inst().getContent().find('.roofline_point_ai').html('<i>Select first.</i>');
+            this.inst().getContent().find('.roofline_point_perf').html('<i>Select first.</i>');
         } else {
-            let point = this.root_window.getData().roofline_dict[new_val];
+            let point = this.inst().root_window.getData().roofline_dict[new_val];
 
-            this.getContent().find('.roofline_point_ai').text(point[0]);
-            this.getContent().find('.roofline_point_perf').text(point[1] / 1000000000);
+            this.inst().getContent().find('.roofline_point_ai').text(point[0]);
+            this.inst().getContent().find('.roofline_point_perf').text(point[1] / 1000000000);
         }
     }
 
     updateRoofline() {
-        let plot_present = this.getContent().find('.roofline_type_select').val() != null;
+        let plot_present = this.inst().getContent().find('.roofline_type_select').val() != null;
         let model = plot_present ?
-            this.getData().roofline.models[
-                this.getContent().find('.roofline_type_select').val()] : undefined;
+            this.inst().getData().roofline.models[
+                this.inst().getContent().find('.roofline_type_select').val()] : undefined;
         let plot_data = [];
         let for_turning_x = [];
 
-        if (this.getData().roofline.bounds.l1) {
+        if (this.inst().getData().roofline.bounds.l1) {
             if (plot_present) {
-                plot_data.push(this.getData().roofline.l1_func);
+                plot_data.push(this.inst().getData().roofline.l1_func);
                 for_turning_x.push(model.l1.gbps);
             }
 
-            this.getContent().find('.roofline_l1').html('<b>L1:</b> on');
+            this.inst().getContent().find('.roofline_l1').html('<b>L1:</b> on');
         } else {
-            this.getContent().find('.roofline_l1').html('<b>L1:</b> off');
+            this.inst().getContent().find('.roofline_l1').html('<b>L1:</b> off');
         }
 
-        if (this.getData().roofline.bounds.l2) {
+        if (this.inst().getData().roofline.bounds.l2) {
             if (plot_present) {
-                plot_data.push(this.getData().roofline.l2_func);
+                plot_data.push(this.inst().getData().roofline.l2_func);
                 for_turning_x.push(model.l2.gbps);
             }
 
-            this.getContent().find('.roofline_l2').html('<b>L2:</b> on');
+            this.inst().getContent().find('.roofline_l2').html('<b>L2:</b> on');
         } else {
-            this.getContent().find('.roofline_l2').html('<b>L2:</b> off');
+            this.inst().getContent().find('.roofline_l2').html('<b>L2:</b> off');
         }
 
-        if (this.getData().roofline.bounds.l3) {
+        if (this.inst().getData().roofline.bounds.l3) {
             if (plot_present) {
-                plot_data.push(this.getData().roofline.l3_func);
+                plot_data.push(this.inst().getData().roofline.l3_func);
                 for_turning_x.push(model.l3.gbps);
             }
 
-            this.getContent().find('.roofline_l3').html('<b>L3:</b> on');
+            this.inst().getContent().find('.roofline_l3').html('<b>L3:</b> on');
         } else {
-            this.getContent().find('.roofline_l3').html('<b>L3:</b> off');
+            this.inst().getContent().find('.roofline_l3').html('<b>L3:</b> off');
         }
 
-        if (this.getData().roofline.bounds.dram) {
+        if (this.inst().getData().roofline.bounds.dram) {
             if (plot_present) {
-                plot_data.push(this.getData().roofline.dram_func);
+                plot_data.push(this.inst().getData().roofline.dram_func);
                 for_turning_x.push(model.dram.gbps);
             }
 
-            this.getContent().find('.roofline_dram').html('<b>DRAM:</b> on');
+            this.inst().getContent().find('.roofline_dram').html('<b>DRAM:</b> on');
         } else {
-            this.getContent().find('.roofline_dram').html('<b>DRAM:</b> off');
+            this.inst().getContent().find('.roofline_dram').html('<b>DRAM:</b> off');
         }
 
-        if (this.getData().roofline.bounds.fp) {
+        if (this.inst().getData().roofline.bounds.fp) {
             if (plot_present) {
-                plot_data.push(this.getData().roofline.fp_func);
+                plot_data.push(this.inst().getData().roofline.fp_func);
             }
 
-            this.getContent().find('.roofline_fp').html('<b>FP:</b> on');
+            this.inst().getContent().find('.roofline_fp').html('<b>FP:</b> on');
         } else {
-            this.getContent().find('.roofline_fp').html('<b>FP:</b> off');
+            this.inst().getContent().find('.roofline_fp').html('<b>FP:</b> off');
         }
 
         if (plot_present) {
@@ -1608,7 +1623,7 @@ class RooflineWindow extends Window {
             let max_point_x = 0;
             let max_point_y = 0;
 
-            for (const [name, [x, y]] of Object.entries(this.root_window.getData().roofline_dict)) {
+            for (const [name, [x, y]] of Object.entries(this.inst().root_window.getData().roofline_dict)) {
                 let scaled_y = y / 1000000000;
 
                 plot_data.push({
@@ -1634,58 +1649,58 @@ class RooflineWindow extends Window {
                 }
             }
 
-            this.getData().roofline.plot_config.data = plot_data;
-            this.getData().roofline.plot_config.xAxis.domain =
+            this.inst().getData().roofline.plot_config.data = plot_data;
+            this.inst().getData().roofline.plot_config.xAxis.domain =
                 [0.00390625, turning_x > max_point_x ? 1.5 * turning_x : 1.1 * max_point_x];
-            this.getData().roofline.plot_config.yAxis.domain =
+            this.inst().getData().roofline.plot_config.yAxis.domain =
                 [0.00390625, model.fp_fma.gflops > max_point_y ?
                  1.25 * model.fp_fma.gflops : 1.1 * max_point_y];
-            functionPlot(this.getData().roofline.plot_config);
+            functionPlot(this.inst().getData().roofline.plot_config);
         }
     }
 
     onRooflineBoundsChange(bound) {
-        this.getData().roofline.bounds[bound] = !this.getData().roofline.bounds[bound];
-        this.updateRoofline();
+        this.inst().getData().roofline.bounds[bound] = !this.inst().getData().roofline.bounds[bound];
+        this.inst().updateRoofline();
     }
 
     onRooflineTypeChange(event) {
         let type_index = event.currentTarget.value;
-        let model = this.getData().roofline.models[type_index];
+        let model = this.inst().getData().roofline.models[type_index];
 
-        this.getContent().find('.roofline_details_text').html(`
+        this.inst().getContent().find('.roofline_details_text').html(`
         <b>Precision:</b> ${model.precision}<br />
         <b>Threads:</b> ${model.threads}<br />
         <b>Loads:</b> ${model.loads}<br />
         <b>Stores:</b> ${model.stores}<br />
         <b>Interleaved:</b> ${model.interleaved}<br />
-        <b>L1 bytes:</b> ${this.getData().roofline.l1}<br />
-        <b>L2 bytes:</b> ${this.getData().roofline.l2}<br />
-        <b>L3 bytes:</b> ${this.getData().roofline.l3}<br />
+        <b>L1 bytes:</b> ${this.inst().getData().roofline.l1}<br />
+        <b>L2 bytes:</b> ${this.inst().getData().roofline.l2}<br />
+        <b>L3 bytes:</b> ${this.inst().getData().roofline.l3}<br />
         <b>DRAM bytes:</b> ${model.dram_bytes}
     `);
 
-        this.getData().roofline.l1_func = {
+        this.inst().getData().roofline.l1_func = {
             fn: `min(x * ${model.l1.gbps}, ${model.fp_fma.gflops})`,
             color: 'darkred'
         };
 
-        this.getData().roofline.l2_func = {
+        this.inst().getData().roofline.l2_func = {
             fn: `min(x * ${model.l2.gbps}, ${model.fp_fma.gflops})`,
             color: 'darkgreen'
         };
 
-        this.getData().roofline.l3_func = {
+        this.inst().getData().roofline.l3_func = {
             fn: `min(x * ${model.l3.gbps}, ${model.fp_fma.gflops})`,
             color: 'darkblue'
         };
 
-        this.getData().roofline.dram_func = {
+        this.inst().getData().roofline.dram_func = {
             fn: `min(x * ${model.dram.gbps}, ${model.fp_fma.gflops})`,
             color: 'darkgrey'
         };
 
-        this.getData().roofline.fp_func = {
+        this.inst().getData().roofline.fp_func = {
             fn: model.fp.gflops,
             color: 'black',
             graphType: 'scatter',
@@ -1695,34 +1710,34 @@ class RooflineWindow extends Window {
         let plot_data = [];
         let for_turning_x = [];
 
-        if (this.getData().roofline.bounds.l1) {
-            plot_data.push(this.getData().roofline.l1_func);
+        if (this.inst().getData().roofline.bounds.l1) {
+            plot_data.push(this.inst().getData().roofline.l1_func);
             for_turning_x.push(model.l1.gbps);
         }
 
-        if (this.getData().roofline.bounds.l2) {
-            plot_data.push(this.getData().roofline.l2_func);
+        if (this.inst().getData().roofline.bounds.l2) {
+            plot_data.push(this.inst().getData().roofline.l2_func);
             for_turning_x.push(model.l2.gbps);
         }
 
-        if (this.getData().roofline.bounds.l3) {
-            plot_data.push(this.getData().roofline.l3_func);
+        if (this.inst().getData().roofline.bounds.l3) {
+            plot_data.push(this.inst().getData().roofline.l3_func);
             for_turning_x.push(model.l3.gbps);
         }
 
-        if (this.getData().roofline.bounds.dram) {
-            plot_data.push(this.getData().roofline.dram_func);
+        if (this.inst().getData().roofline.bounds.dram) {
+            plot_data.push(this.inst().getData().roofline.dram_func);
             for_turning_x.push(model.dram.gbps);
         }
 
-        if (this.getData().roofline.bounds.fp) {
-            plot_data.push(this.getData().roofline.fp_func);
+        if (this.inst().getData().roofline.bounds.fp) {
+            plot_data.push(this.inst().getData().roofline.fp_func);
         }
 
         let max_point_x = 0;
         let max_point_y = 0;
 
-        for (const [name, [x, y]] of Object.entries(this.root_window.getData().roofline_dict)) {
+        for (const [name, [x, y]] of Object.entries(this.inst().root_window.getData().roofline_dict)) {
             let scaled_y = y / 1000000000;
 
             plot_data.push({
@@ -1750,10 +1765,10 @@ class RooflineWindow extends Window {
 
         let turning_x = model.fp_fma.gflops / Math.min(...for_turning_x);
 
-        let container = this.getContent().find('.roofline');
+        let container = this.inst().getContent().find('.roofline');
 
-        this.getData().roofline.plot_config = {
-            target: '#' + this.getId() + '_roofline',
+        this.inst().getData().roofline.plot_config = {
+            target: '#' + this.inst().getId() + '_roofline',
             width: container.width() - 10,
             height: container.height() - 10,
             xAxis: {
@@ -1771,7 +1786,7 @@ class RooflineWindow extends Window {
             data: plot_data
         };
 
-        functionPlot(this.getData().roofline.plot_config);
+        functionPlot(this.inst().getData().roofline.plot_config);
     }
 }
 
@@ -1811,6 +1826,11 @@ class CodeWindow extends Window {
                                     window.alert('Could not load ' + default_path + '!');
                                 }, 'text');
         }
+    }
+
+    constructor(...args) {
+        super();
+        this.init(this, ...args);
     }
 
     getType() {
@@ -1861,23 +1881,23 @@ class CodeWindow extends Window {
     }
 
     _setup(data, existing_window) {
-        this.root_window = this.getDependencyObjects()[0];
+        this.inst().root_window = this.inst().getDependencyObjects()[0];
         for (const f of Object.keys(data.files_and_lines)) {
-            this.getContent().find('.code_file').append(
+            this.inst().getContent().find('.code_file').append(
                 new Option(f, f));
         }
-        this.getContent().find('.code_file').val(data.default_file);
-        this.getContent().find('.code_file').on('change', (event) => {
-            this.onCodeFileChange(event);
+        this.inst().getContent().find('.code_file').val(data.default_file);
+        this.inst().getContent().find('.code_file').on('change', (event) => {
+            this.inst().onCodeFileChange(event);
         });
 
-        this.getData().files_and_lines =
+        this.inst().getData().files_and_lines =
             structuredClone(data.files_and_lines);
 
-        this.prepareCodePreview(data.code,
-                                data.files_and_lines[data.default_file])
+        this.inst().prepareCodePreview(data.code,
+                                       data.files_and_lines[data.default_file])
 
-        this.hideLoading();
+        this.inst().hideLoading();
     }
 
     getTitle() {
@@ -1887,26 +1907,26 @@ class CodeWindow extends Window {
     onCodeFileChange(event) {
         let path = event.currentTarget.value;
         let load = (code) => {
-            this.prepareCodePreview(code,
-                                    this.getData().files_and_lines[path]);
+            this.inst().prepareCodePreview(code,
+                                           this.inst().getData().files_and_lines[path]);
         };
 
-        if (path in this.root_window.getData().src_cache) {
-            load(this.root_window.getData().src_cache[path]);
+        if (path in this.inst().root_window.getData().src_cache) {
+            load(this.inst().root_window.getData().src_cache[path]);
         } else {
-            this.sendRequest({src: this.root_window.getData().src_index_dict[path]},
-                              src_code => {
-                                  this.root_window.getData().src_cache[path] = src_code;
-                                  load(src_code);
-                              }, (xhr, status, error) => {
-                                  window.alert('Could not load ' + path + '!');
-                              }, 'text');
+            this.inst().sendRequest({src: this.inst().root_window.getData().src_index_dict[path]},
+                                    src_code => {
+                                        this.inst().root_window.getData().src_cache[path] = src_code;
+                                        load(src_code);
+                                    }, (xhr, status, error) => {
+                                        window.alert('Could not load ' + path + '!');
+                                    }, 'text');
         }
     }
 
     prepareCodePreview(code, lines) {
-        this.getContent().find('.code_container').scrollTop(0);
-        let code_box = this.getContent().find('.code_box');
+        this.inst().getContent().find('.code_container').scrollTop(0);
+        let code_box = this.inst().getContent().find('.code_box');
         code_box.html('');
 
         for (const attr of code_box[0].attributes) {
@@ -1918,8 +1938,8 @@ class CodeWindow extends Window {
         }
 
         code_box.text(code);
-        this.getContent().find('.code_copy_all').off('click');
-        this.getContent().find('.code_copy_all').on('click', {
+        this.inst().getContent().find('.code_copy_all').off('click');
+        this.inst().getContent().find('.code_copy_all').on('click', {
             code: code
         }, (event) => {
             navigator.clipboard.writeText(event.data.code);
@@ -1928,14 +1948,14 @@ class CodeWindow extends Window {
 
         let line_to_go = undefined;
 
-        hljs.highlightElement(this.getContent().find('.code_box')[0]);
-        hljs.lineNumbersBlockSync(this.getContent().find('.code_box')[0]);
+        hljs.highlightElement(this.inst().getContent().find('.code_box')[0]);
+        hljs.lineNumbersBlockSync(this.inst().getContent().find('.code_box')[0]);
 
         let numf = new Intl.NumberFormat('en-US');
 
         for (const [line, how] of Object.entries(lines)) {
-            let num_elem = this.getContent().find('.hljs-ln-numbers[data-line-number="' + line + '"]');
-            let line_elem = this.getContent().find('.hljs-ln-code[data-line-number="' + line + '"]');
+            let num_elem = this.inst().getContent().find('.hljs-ln-numbers[data-line-number="' + line + '"]');
+            let line_elem = this.inst().getContent().find('.hljs-ln-code[data-line-number="' + line + '"]');
 
             num_elem.css('text-decoration', 'underline');
             num_elem.css('font-weight', 'bold');
@@ -1984,8 +2004,8 @@ class CodeWindow extends Window {
                 line_to_go = 1;
             }
 
-            let container = this.getContent().find('.code_container');
-            container.scrollTop(this.getContent().find(
+            let container = this.inst().getContent().find('.code_container');
+            container.scrollTop(this.inst().getContent().find(
                 '.hljs-ln-numbers[data-line-number="' + line_to_go + '"]').offset().top -
                                 container.offset().top);
         }
