@@ -8,9 +8,8 @@ from zipfile import ZipFile
 from zipfile import Path as ZipFilePath
 from treelib import Tree
 from pathlib import Path
-from collections import deque, defaultdict
+from collections import deque
 from adaptystanalyser import Module, Session, Window
-from adaptystanalyser import arrangements as arrgmts
 
 
 class TimelineWindow(Window):
@@ -27,7 +26,7 @@ class TimelineWindow(Window):
     def get_constr_params(self) -> list:
         pass
 
-    def get_dependencies(self) -> list[Self]:
+    def get_dependencies(self) -> list:
         return []
 
     def get_data(self):
@@ -50,7 +49,7 @@ class FlameGraphWindow(Window):
     def get_constr_params(self) -> list:
         pass
 
-    def get_dependencies(self) -> list[Self]:
+    def get_dependencies(self) -> list:
         return [self._timeline_window]
 
     def get_data(self):
@@ -650,48 +649,44 @@ class LinuxperfModule(Module):
             with path.open() as f:
                 return f.read()
 
+    def process_post_request(self, data):
+        if 'thread_tree' in data or \
+          'general_analysis' in data or \
+          ('pid' in data and 'tid' in data and
+           'threshold' in data) or \
+          'callchain' in data or 'src' in data:
+            if 'thread_tree' in data:
+                return self.get_json_tree()
+            elif 'general_analysis' in data:
+                json_data = self.get_general_analysis(
+                    data['general_analysis'])
 
-def process(session, entity, node_or_edge, data):
-    if 'thread_tree' in data or \
-       'general_analysis' in data or \
-       ('pid' in data and 'tid' in data and
-        'threshold' in data) or \
-       'callchain' in data or 'src' in data:
-        results = LinuxperfModule(session,
-                                  entity, node_or_edge)
+                if json_data is None:
+                    return '', 404
+                else:
+                    return json_data
+            elif 'pid' in data and 'tid' in data and \
+                 'threshold' in data:
+                json_data = self.get_flame_graph(
+                    data['pid'],
+                    data['tid'],
+                    float(data['threshold']))
 
-        if 'thread_tree' in data:
-            return results.get_json_tree()
-        elif 'general_analysis' in data:
-            json_data = results.get_general_analysis(
-                data['general_analysis'])
+                if json_data is None:
+                    return '', 404
+                else:
+                    return json_data
+            elif 'callchain' in data:
+                return self.get_callchain_mappings()
+            elif 'src' in data:
+                result = self.get_source_code(data['src'])
 
-            if json_data is None:
-                return '', 404
-            else:
-                return json_data
-        elif 'pid' in data and 'tid' in data and \
-             'threshold' in data:
-            json_data = results.get_flame_graph(
-                data['pid'],
-                data['tid'],
-                float(data['threshold']))
+                if result is None:
+                    return '', 404
 
-            if json_data is None:
-                return '', 404
-            else:
-                return json_data
-        elif 'callchain' in data:
-            return results.get_callchain_mappings()
-        elif 'src' in data:
-            result = results.get_source_code(data['src'])
+                return result
 
-            if result is None:
-                return '', 404
-
-            return result
-    else:
-        return '', 400
+        return '', 401
 
 
 def get_mod_obj(session, entity, node_or_edge, options):
