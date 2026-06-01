@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 CERN
+# SPDX-FileCopyrightText: 2026 CERN
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import re
@@ -9,13 +9,63 @@ from zipfile import Path as ZipFilePath
 from treelib import Tree
 from pathlib import Path
 from collections import deque, defaultdict
+from adaptystanalyser import Module, Session, Window
+from adaptystanalyser import arrangements as arrgmts
 
 
-class LinuxPerfResults:
-    def __init__(self, storage: str, identifier: str,
+class TimelineWindow(Window):
+    def __init__(self, module, session):
+        self._module = module
+        self._session = session
+
+    def get_module(self) -> Module:
+        return self._module
+
+    def get_type(self) -> str:
+        return 'timeline'
+
+    def get_constr_params(self) -> list:
+        pass
+
+    def get_dependencies(self) -> list[Self]:
+        return []
+
+    def get_data(self):
+        return None
+
+    def get_session(self) -> Session:
+        return self._session
+
+
+class FlameGraphWindow(Window):
+    def __init__(self, timeline_window: TimelineWindow):
+        self._timeline_window = timeline_window
+
+    def get_module(self) -> Module:
+        return self._timeline_window.get_module()
+
+    def get_type(self) -> str:
+        return 'flame_graph'
+
+    def get_constr_params(self) -> list:
+        pass
+
+    def get_dependencies(self) -> list[Self]:
+        return [self._timeline_window]
+
+    def get_data(self):
+        return None
+
+    def get_session(self) -> Session:
+        return self._timeline_window.get_session()
+
+
+class LinuxperfModule(Module):
+    def __init__(self, session: Session,
                  entity: str, node: str):
-        self._entity_path = Path(storage) / identifier / 'system' / \
+        self._entity_path = session.identifier.path / 'system' / \
             entity
+        self._session = session
         self._path = self._entity_path / node / 'linuxperf'
 
         self._threads_metadata = None
@@ -116,6 +166,9 @@ class LinuxPerfResults:
                         with src_index_path.open(mode='w') as f:
                             f.write(index_str)
 
+    def get_name(self):
+        return 'linuxperf'
+
     def get_general_analysis(self, analysis_type):
         """
         Get general analysis data of a specified type. If the type
@@ -213,14 +266,27 @@ class LinuxPerfResults:
         else:
             return None
 
+    def get_flame_graph_window(self, pid, tid):
+        """
+        Get a FlameGraphWindow object (an adaptystanalyser.Window subclass)
+        corresponding to a flame graph of a thread/process with the given
+        PID and TID. This can be used e.g. to save a single window
+        arrangement with a given flame graph and share it with others
+        programmatically.
+
+        :param int pid: The PID of a thread/process.
+        :param int tid: The TID of a thread/process.
+        """
+
+
     def get_flame_graph(self, pid, tid, compress_threshold):
         """
         Get a flame graph of the thread/process with a given PID and TID
         to be rendered by d3-flame-graph, taking into account to collapse
         blocks taking less than a specified share of total samples.
 
-        :param int pid: The PID of a thread/process in the session.
-        :param int tid: The TID of a thread/process in the session.
+        :param int pid: The PID of a thread/process.
+        :param int tid: The TID of a thread/process.
         :param float compress_threshold: A compression threshold. For
                                          example, if its value is 0.10,
                                          blocks taking less than 10% of
@@ -419,8 +485,7 @@ class LinuxPerfResults:
 
     def get_thread_tree(self) -> Tree:
         """
-        Get a treelib.Tree object representing the thread/process tree of
-        the session.
+        Get a treelib.Tree object representing the thread/process tree.
         """
         if self._thread_tree is not None:
             return self._thread_tree
@@ -435,11 +500,10 @@ class LinuxPerfResults:
 
     def get_json_tree(self):
         """
-        Get a JSON object string representing the thread/process tree of
-        the session.
+        Get a JSON object string representing the thread/process tree.
 
         The returned object is the root, which describes the very first
-        process detected in the session along with its children.
+        process detected along with its children.
         The object has the following keys:
         * "id": the unique identifier of a thread/process in form of
           "<PID>_<TID>".
@@ -567,7 +631,7 @@ class LinuxPerfResults:
 
     def get_source_code(self, filename):
         """
-        Get a source code stored in the session under a specified
+        Get a source code stored in the module results under a specified
         name.
 
         :param str filename: The name of a source code to be
@@ -587,14 +651,14 @@ class LinuxPerfResults:
                 return f.read()
 
 
-def process(storage, identifier, entity, node, data):
+def process(session, entity, node_or_edge, data):
     if 'thread_tree' in data or \
        'general_analysis' in data or \
        ('pid' in data and 'tid' in data and
         'threshold' in data) or \
        'callchain' in data or 'src' in data:
-        results = LinuxPerfResults(storage, identifier,
-                                   entity, node)
+        results = LinuxperfModule(session,
+                                  entity, node_or_edge)
 
         if 'thread_tree' in data:
             return results.get_json_tree()
@@ -628,3 +692,7 @@ def process(storage, identifier, entity, node, data):
             return result
     else:
         return '', 400
+
+
+def get_mod_obj(session, entity, node_or_edge, options):
+    return LinuxperfModule(session, entity, node_or_edge)
