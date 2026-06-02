@@ -23,7 +23,7 @@ class TimelineWindow(Window):
     def get_type(self) -> str:
         return 'timeline'
 
-    def get_constr_params(self) -> list:
+    def get_constr_args(self) -> list:
         pass
 
     def get_dependencies(self) -> list:
@@ -46,7 +46,7 @@ class FlameGraphWindow(Window):
     def get_type(self) -> str:
         return 'flame_graph'
 
-    def get_constr_params(self) -> list:
+    def get_constr_args(self) -> list:
         pass
 
     def get_dependencies(self) -> list:
