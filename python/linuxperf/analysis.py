@@ -276,6 +276,7 @@ class LinuxperfModule(Module):
         :param int pid: The PID of a thread/process.
         :param int tid: The TID of a thread/process.
         """
+        pass
 
 
     def get_flame_graph(self, pid, tid, compress_threshold):
