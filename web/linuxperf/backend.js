@@ -4,9 +4,12 @@
 const MODULE_NAME = 'linuxperf';
 
 class TimelineWindow extends Window {
-    constructor(...args) {
+    constructor(deserialized, ...args) {
         super();
-        this.init(this, ...args);
+
+        if (!deserialized) {
+            this.init(this, ...args);
+        }
     }
 
     getType() {
@@ -552,9 +555,12 @@ class TimelineWindow extends Window {
 }
 
 class FlameGraphWindow extends Window {
-    constructor(...args) {
+    constructor(deserialized, ...args) {
         super();
-        this.init(this, ...args);
+
+        if (!deserialized) {
+            this.init(this, ...args);
+        }
     }
 
     getType() {
@@ -1327,9 +1333,12 @@ class FlameGraphWindow extends Window {
 }
 
 class RooflineWindow extends Window {
-    constructor(...args) {
+    constructor(deserialized, ...args) {
         super();
-        this.init(this, ...args);
+
+        if (!deserialized) {
+            this.init(this, ...args);
+        }
     }
 
     getType() {
@@ -1828,9 +1837,12 @@ class CodeWindow extends Window {
         }
     }
 
-    constructor(...args) {
+    constructor(deserialized, ...args) {
         super();
-        this.init(this, ...args);
+
+        if (!deserialized) {
+            this.init(this, ...args);
+        }
     }
 
     getType() {
