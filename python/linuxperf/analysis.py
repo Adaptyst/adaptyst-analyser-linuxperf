@@ -9,13 +9,14 @@ from zipfile import Path as ZipFilePath
 from treelib import Tree
 from pathlib import Path
 from collections import deque
-from adaptystanalyser import Module, Session, Window
+from adaptystanalyser import \
+    Module, Identifier, Session, Window, Analysable
 
 
 class TimelineWindow(Window):
-    def __init__(self, module, session):
-        self._module = module
+    def __init__(self, session, module):
         self._session = session
+        self._module = module
 
     def get_module(self) -> Module:
         return self._module
@@ -24,7 +25,7 @@ class TimelineWindow(Window):
         return 'timeline'
 
     def get_constr_args(self) -> list:
-        pass
+        return []
 
     def get_dependencies(self) -> list:
         return []
@@ -35,10 +36,19 @@ class TimelineWindow(Window):
     def get_session(self) -> Session:
         return self._session
 
+    def get_analysable(self) -> Analysable:
+        return self._module.get_analysable()
+
+    def get_init_data(self):
+        return None
+
 
 class FlameGraphWindow(Window):
-    def __init__(self, timeline_window: TimelineWindow):
+    def __init__(self, timeline_window: TimelineWindow,
+                 pid: str, tid: str):
         self._timeline_window = timeline_window
+        self._pid = pid
+        self._tid = tid
 
     def get_module(self) -> Module:
         return self._timeline_window.get_module()
@@ -47,7 +57,7 @@ class FlameGraphWindow(Window):
         return 'flame_graph'
 
     def get_constr_args(self) -> list:
-        pass
+        return []
 
     def get_dependencies(self) -> list:
         return [self._timeline_window]
@@ -55,26 +65,40 @@ class FlameGraphWindow(Window):
     def get_data(self):
         return None
 
+    def get_init_data(self):
+        return {
+            'timeline_group_id': f'{self._pid}_{self._tid}'
+        }
+
+    def get_analysable(self) -> Analysable:
+        return self.get_module().get_analysable()
+
     def get_session(self) -> Session:
         return self._timeline_window.get_session()
 
 
 class LinuxperfModule(Module):
-    def __init__(self, session: Session,
-                 entity: str, node: str):
-        self._entity_path = session.identifier.path / 'system' / \
+    def __init__(self, session_id: Identifier, entity: str,
+                 node: str):
+        self._entity_path = session_id.path / 'system' / \
             entity
-        self._session = session
+        self._entity = entity
         self._path = self._entity_path / node / 'linuxperf'
 
         self._threads_metadata = None
 
-        with (self._path / 'threads.json').open(mode='r') as f:
-            self._threads_metadata = json.load(f)
-
         self._metrics = {}
         self._roofline_info = {}
         self._thread_tree = None
+
+        self._general_metrics = {}
+        self._sources = {}
+        self._source_index = {}
+        self._source_zip_path = None
+
+    def _load(self):
+        with (self._path / 'threads.json').open(mode='r') as f:
+            self._threads_metadata = json.load(f)
 
         for metric in filter(Path.is_dir, self._path.glob('*')):
             metric_path = metric / 'dirmeta.json'
@@ -128,16 +152,10 @@ class LinuxperfModule(Module):
                                 ]
                             }
 
-        self._general_metrics = {}
-
         if (self._path / 'roofline.csv').exists():
             self._general_metrics['roofline'] = {
                 'title': 'Cache-aware roofline model'
             }
-
-        self._sources = {}
-        self._source_index = {}
-        self._source_zip_path = None
 
         if (self._path / 'sources.json').exists():
             with (self._path / 'sources.json').open(
@@ -168,6 +186,7 @@ class LinuxperfModule(Module):
     def get_name(self):
         return 'linuxperf'
 
+    @Module.needs_loading
     def get_general_analysis(self, analysis_type):
         """
         Get general analysis data of a specified type. If the type
@@ -265,6 +284,7 @@ class LinuxperfModule(Module):
         else:
             return None
 
+    @Module.needs_loading
     def get_flame_graph_window(self, pid, tid):
         """
         Get a FlameGraphWindow object (an adaptystanalyser.Window subclass)
@@ -276,9 +296,11 @@ class LinuxperfModule(Module):
         :param int pid: The PID of a thread/process.
         :param int tid: The TID of a thread/process.
         """
-        pass
 
+        return FlameGraphWindow(TimelineWindow(self.get_session(), self),
+                                pid, tid)
 
+    @Module.needs_loading
     def get_flame_graph(self, pid, tid, compress_threshold):
         """
         Get a flame graph of the thread/process with a given PID and TID
@@ -456,6 +478,7 @@ class LinuxperfModule(Module):
 
         return json.dumps(data)
 
+    @Module.needs_loading
     def get_callchain_mappings(self):
         """
         Get a JSON object string representing dictionaries mapping compressed
@@ -483,6 +506,7 @@ class LinuxperfModule(Module):
 
         return json.dumps(result_dict)
 
+    @Module.needs_loading
     def get_thread_tree(self) -> Tree:
         """
         Get a treelib.Tree object representing the thread/process tree.
@@ -498,6 +522,7 @@ class LinuxperfModule(Module):
         self._thread_tree = tree
         return tree
 
+    @Module.needs_loading
     def get_json_tree(self):
         """
         Get a JSON object string representing the thread/process tree.
@@ -629,6 +654,7 @@ class LinuxperfModule(Module):
             return json.dumps(node_to_dict(tree.get_node(tree.root),
                                            True))
 
+    @Module.needs_loading
     def get_source_code(self, filename):
         """
         Get a source code stored in the module results under a specified
@@ -690,5 +716,5 @@ class LinuxperfModule(Module):
         return '', 401
 
 
-def get_mod_obj(session, entity, node_or_edge, options):
-    return LinuxperfModule(session, entity, node_or_edge)
+def get_mod_obj(session_id, entity, analysable, options):
+    return LinuxperfModule(session_id, entity, analysable)

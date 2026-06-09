@@ -446,7 +446,7 @@ class TimelineWindow extends Window {
                                                 Menu.closeMenu();
                                                 CodeWindow.openCode(this.inst(), data, event.data.file,
                                                                     this.inst().getSession(), this.inst().getEntityId(),
-                                                                    this.inst().getNodeId());
+                                                                    this.inst().getAnalysableId());
                                             });
                                     }
                                 } else {
@@ -534,8 +534,8 @@ class TimelineWindow extends Window {
         let analysis_type = event.data.data;
 
         if (analysis_type === 'roofline') {
-            new RooflineWindow(this.inst().getSession(), this.inst().getEntityId(),
-                               this.inst().getNodeId(), MODULE_NAME, undefined,
+            new RooflineWindow(false, this.inst().getSession(), this.inst().getEntityId(),
+                               this.inst().getAnalysableId(), MODULE_NAME, undefined,
                                event.pageX, event.pageY, [this.inst()]);
         }
     }
@@ -546,8 +546,8 @@ class TimelineWindow extends Window {
         let parent = event.data.data[2];
 
         if (analysis_type === 'flame_graphs') {
-            new FlameGraphWindow(this.inst().getSession(), this.inst().getEntityId(),
-                                 this.inst().getNodeId(), MODULE_NAME, {
+            new FlameGraphWindow(false, this.inst().getSession(), this.inst().getEntityId(),
+                                 this.inst().getAnalysableId(), MODULE_NAME, {
                                      timeline_group_id: timeline_group_id
                                  }, event.pageX, event.pageY, [this.inst()]);
         }
@@ -828,7 +828,7 @@ class FlameGraphWindow extends Window {
 
         CodeWindow.openCode(this.inst().root_window,
                             sums, Object.keys(sums)[0], this.inst().getSession(), this.inst().getEntityId(),
-                            this.inst().getNodeId());
+                            this.inst().getAnalysableId());
     }
 
     onAddToRooflineClick(event) {
@@ -1007,7 +1007,7 @@ class FlameGraphWindow extends Window {
             if (v.getType() === 'linuxperf_roofline' &&
                 v.getSession().id === this.inst().getSession().id &&
                 v.getEntityId() === this.inst().getEntityId() &&
-                v.getNodeId() === this.inst().getNodeId()) {
+                v.getAnalysableId() === this.inst().getAnalysableId()) {
                 v.getContent().find('.roofline_point_select').append(
                     new Option(name, name));
                 v.updateRoofline();
@@ -1814,7 +1814,7 @@ class CodeWindow extends Window {
     static openCode(root_window,
                     data, default_path, session, entity_id, node_id) {
         let load = (code) => {
-            new CodeWindow(session, entity_id, node_id, MODULE_NAME, {
+            new CodeWindow(false, session, entity_id, node_id, MODULE_NAME, {
                 code: code,
                 files_and_lines: data,
                 default_file: default_path,
@@ -2024,8 +2024,9 @@ class CodeWindow extends Window {
     }
 }
 
-function createRootWindow(entity_id, node_id, session) {
-    return new TimelineWindow(session, entity_id, node_id, MODULE_NAME, {});
+function createRootWindow(entity_id, analysable_id, session) {
+    return new TimelineWindow(false, session, entity_id,
+                              analysable_id, MODULE_NAME);
 }
 
 function getWindowClass(type) {
