@@ -296,6 +296,14 @@ class LinuxperfModule(Module):
         :param int pid: The PID of a thread/process.
         :param int tid: The TID of a thread/process.
         """
+        tree = self.get_thread_tree()
+        node = tree.get_node(str(tid))
+
+        if node is None:
+            return None
+
+        if node.tag[1] != f'{pid}/{tid}':
+            return None
 
         return FlameGraphWindow(TimelineWindow(self.get_session(), self),
                                 pid, tid)
