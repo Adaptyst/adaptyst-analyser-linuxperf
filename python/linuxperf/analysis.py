@@ -22,7 +22,7 @@ class TimelineWindow(Window):
         return self._module
 
     def get_type(self) -> str:
-        return 'timeline'
+        return 'linuxperf_timeline'
 
     def get_constr_args(self) -> list:
         return []
@@ -54,7 +54,7 @@ class FlameGraphWindow(Window):
         return self._timeline_window.get_module()
 
     def get_type(self) -> str:
-        return 'flame_graph'
+        return 'linuxperf_flame_graph'
 
     def get_constr_args(self) -> list:
         return []
