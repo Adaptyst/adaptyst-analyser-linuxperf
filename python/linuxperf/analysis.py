@@ -80,10 +80,9 @@ class FlameGraphWindow(Window):
 class LinuxperfModule(Module):
     def __init__(self, session_id: Identifier, entity: str,
                  node: str):
-        self._entity_path = session_id.path / 'system' / \
-            entity
-        self._entity = entity
-        self._path = self._entity_path / node / 'linuxperf'
+        self._entity_path = session_id.get_detailed_path(entity)
+        self._path = session_id.get_detailed_path(entity, node,
+                                                  self.get_name())
 
         self._threads_metadata = None
 
