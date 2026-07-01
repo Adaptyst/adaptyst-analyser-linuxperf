@@ -101,33 +101,45 @@ class TimelineWindow extends Window {
                                  sampled_diff_dict,
                                  src_dict, src_index_dict,
                                  roofline_info,
-                                 max_off_cpu_sampling) => {
-                                     let item = {
-                                         id: json.id,
-                                         group: json.id,
-                                         type: 'background',
-                                         content: '',
-                                         start: json.start_time,
-                                         end: json.start_time + json.runtime,
-                                         style: 'background-color:#aa0000; z-index:-1'
-                                     };
+                                 max_off_cpu_sampling,
+                                 regions_only) => {
+                                     let id = json.id;
+                                     let total_runtime = 0;
+                                     let is_region = /^(\d+)_(\d+)_(.+)$/.test(json.id);
 
-                                     overall_end_time[0] = Math.max(overall_end_time[0],
-                                                                    json.start_time + json.runtime);
+                                     for (var i = 0; i < json.start_time.length; i++) {
+                                         let item = {
+                                             id: json.id + '_' + i,
+                                             group: json.id,
+                                             type: 'background',
+                                             content: '',
+                                             start: json.start_time[i],
+                                             end: json.start_time[i] + json.runtime[i],
+                                             style: ((is_region || !regions_only) ? 'background-color:#aa0000' :
+                                                     'background-color:#aaaaaa') + '; z-index:-1'
+                                         };
 
-                                     let sampled_diff = (1.0 * Math.abs(
-                                         json.runtime - json.sampled_time)) / json.runtime;
-                                     sampled_diff_dict[item.id] = sampled_diff;
-                                     let warning =
-                                         sampled_diff > 1.0 * parseFloat(
-                                             $('#linuxperf_runtime_diff_threshold_input').val()) / 100;
+                                         overall_end_time[0] = Math.max(overall_end_time[0],
+                                                                        json.start_time[i] + json.runtime[i]);
+                                         total_runtime += json.runtime[i];
+
+                                         item_list.push(item);
+                                     }
 
                                      let group = {
                                          id: json.id,
-                                         content: json.name + ' (' + json.pid_tid + ')',
+                                         content: is_region ? ('<b>[R]</b> ' + json.name) :
+                                             ('<b>[P/T]</b> ' + json.name + ' (' + json.pid_tid + ')'),
                                          style: 'padding-left: ' + (level * 25) + 'px;',
                                          showNested: false
                                      };
+
+                                     let sampled_diff = (1.0 * Math.abs(
+                                         total_runtime - json.sampled_time)) / total_runtime;
+                                     sampled_diff_dict[group.id] = sampled_diff;
+                                     let warning =
+                                         sampled_diff > 1.0 * parseFloat(
+                                             $('#linuxperf_runtime_diff_threshold_input').val()) / 100;
 
                                      let nestedGroups = [];
 
@@ -139,42 +151,43 @@ class TimelineWindow extends Window {
                                          group.nestedGroups = nestedGroups;
                                      }
 
-                                     item_list.push(item);
                                      group_list.push(group);
 
                                      let numf = new Intl.NumberFormat('en-US');
 
-                                     json.runtime = json.runtime.toFixed(3);
+                                     total_runtime = total_runtime.toFixed(3);
                                      json.sampled_time = json.sampled_time.toFixed(3);
 
                                      let default_runtime;
                                      let default_sampled_time;
                                      let default_unit;
 
-                                     if (json.runtime >= 1000 || json.sampled_time >= 1000) {
-                                         default_runtime = (json.runtime / 1000).toFixed(3);
+                                     if (total_runtime >= 1000 || json.sampled_time >= 1000) {
+                                         default_runtime = (total_runtime / 1000).toFixed(3);
                                          default_sampled_time = (json.sampled_time / 1000).toFixed(3);
                                          default_unit = 's';
                                      } else {
-                                         default_runtime = json.runtime;
+                                         default_runtime = total_runtime;
                                          default_sampled_time = json.sampled_time;
                                          default_unit = 'ms';
                                      }
 
-                                     item_dict[item.id] = json.name + ' (' + json.pid_tid + ')';
-                                     tooltip_dict[item.id] =
-                                         ['Runtime: ' +
+                                     item_dict[group.id] = json.name + (is_region ? '' : (' (' + json.pid_tid + ')'));
+                                     tooltip_dict[group.id] =
+                                         ['<b>' + (is_region ? 'Code region [R]' : 'Process/Thread [P/T]') + '</b><br />' +
+                                          'Runtime: ' +
                                           numf.format(default_runtime) +
                                           ' ' + default_unit + '<br /><span class="tooltip_sampled_runtime">' +
                                           '(sampled: ~' +
                                           numf.format(default_sampled_time) + ' ' + default_unit +
                                           ')</span>',
+                                          '<b>' + (is_region ? 'Code region [R]' : 'Process/Thread [P/T]') + '</b><br />' +
                                           'Runtime: ' +
-                                          numf.format(json.runtime) +
+                                          numf.format(total_runtime) +
                                           ' ms<br /><span class="tooltip_sampled_runtime">(sampled: ~' +
                                           numf.format(json.sampled_time) + ' ms)</span>'];
-                                     metrics_dict[item.id] = json.metrics;
-                                     warning_dict[item.id] = [warning, sampled_diff];
+                                     metrics_dict[group.id] = json.metrics;
+                                     warning_dict[group.id] = [warning, sampled_diff];
 
                                      if ('general_metrics' in json && $.isEmptyObject(general_metrics_dict)) {
                                          Object.assign(general_metrics_dict, json.general_metrics);
@@ -192,44 +205,46 @@ class TimelineWindow extends Window {
                                          Object.assign(roofline_info, json.roofline);
                                      }
 
-                                     if (level > 0) {
-                                         callchain_dict[item.id] = json.start_callchain;
+                                     if (level > 0 && json.start_callchain != undefined) {
+                                         callchain_dict[group.id] = json.start_callchain;
                                      }
 
                                      let offcpu_sampling_raw = parseFloat($('#linuxperf_off_cpu_scale').val());
 
                                      if (offcpu_sampling_raw > 0) {
-                                         if (offcpu_sampling_raw < 1) {
-                                             if (level === 0) {
-                                                 max_off_cpu_sampling = json.runtime;
+                                         if (is_region || !regions_only) {
+                                             if (offcpu_sampling_raw < 1) {
+                                                 if (level === 0) {
+                                                     max_off_cpu_sampling = total_runtime;
+                                                 }
+
+                                                 if (max_off_cpu_sampling !== undefined) {
+                                                     this.inst().getData().offcpu_sampling = Math.round(Math.pow(
+                                                         1 - offcpu_sampling_raw, 3) * max_off_cpu_sampling);
+                                                 }
                                              }
 
-                                             if (max_off_cpu_sampling !== undefined) {
-                                                 this.inst().getData().offcpu_sampling = Math.round(Math.pow(
-                                                     1 - offcpu_sampling_raw, 3) * max_off_cpu_sampling);
-                                             }
-                                         }
+                                             for (let i = 0; i < json.off_cpu.length; i++) {
+                                                 let start = json.off_cpu[i][0];
+                                                 let end = start + json.off_cpu[i][1];
 
-                                         for (let i = 0; i < json.off_cpu.length; i++) {
-                                             let start = json.off_cpu[i][0];
-                                             let end = start + json.off_cpu[i][1];
+                                                 if (this.inst().getData().offcpu_sampling === 0 ||
+                                                     start % this.inst().getData().offcpu_sampling === 0 ||
+                                                     end % this.inst().getData().offcpu_sampling === 0 ||
+                                                     Math.floor(start / this.inst().getData().offcpu_sampling) != Math.floor(
+                                                         end / this.inst().getData().offcpu_sampling)) {
+                                                     let off_cpu_item = {
+                                                         id: json.id + '_offcpu' + i,
+                                                         group: json.id,
+                                                         type: 'background',
+                                                         content: '',
+                                                         start: json.off_cpu[i][0],
+                                                         end: json.off_cpu[i][0] + json.off_cpu[i][1],
+                                                         style: 'background-color:#0294e3'
+                                                     };
 
-                                             if (this.inst().getData().offcpu_sampling === 0 ||
-                                                 start % this.inst().getData().offcpu_sampling === 0 ||
-                                                 end % this.inst().getData().offcpu_sampling === 0 ||
-                                                 Math.floor(start / this.inst().getData().offcpu_sampling) != Math.floor(
-                                                     end / this.inst().getData().offcpu_sampling)) {
-                                                 let off_cpu_item = {
-                                                     id: json.id + '_offcpu' + i,
-                                                     group: json.id,
-                                                     type: 'background',
-                                                     content: '',
-                                                     start: json.off_cpu[i][0],
-                                                     end: json.off_cpu[i][0] + json.off_cpu[i][1],
-                                                     style: 'background-color:#0294e3'
-                                                 };
-
-                                                 item_list.push(off_cpu_item);
+                                                     item_list.push(off_cpu_item);
+                                                 }
                                              }
                                          }
                                      } else {
@@ -252,7 +267,8 @@ class TimelineWindow extends Window {
                                                            src_dict,
                                                            src_index_dict,
                                                            roofline_info,
-                                                           max_off_cpu_sampling);
+                                                           max_off_cpu_sampling,
+                                                           regions_only);
                                      }
                                  }
 
@@ -271,7 +287,9 @@ class TimelineWindow extends Window {
                                   this.inst().getData().sampled_diff_dict,
                                   this.inst().getData().src_dict,
                                   this.inst().getData().src_index_dict,
-                                  this.inst().getData().roofline_info);
+                                  this.inst().getData().roofline_info,
+                                  undefined,
+                                  this.inst()._data.regions_only);
             }
 
             if ($.isEmptyObject(this.inst().getData().general_metrics_dict)) {
@@ -726,10 +744,24 @@ class FlameGraphWindow extends Window {
 
             this.inst().hideLoading();
         } else {
-            let pid_tid = data.timeline_group_id.split('_');
+            let region_info = /^(\d+)_(\d+)_(.+)$/.exec(data.timeline_group_id);
+            let pid = undefined;
+            let tid = undefined;
+            let region = undefined;
 
-            this.inst().sendRequest({pid: pid_tid[0],
-                                     tid: pid_tid[1],
+            if (region_info == undefined) {
+                let pid_tid = data.timeline_group_id.split('_');
+                pid = pid_tid[0];
+                tid = pid_tid[1];
+            } else {
+                pid = region_info[1];
+                tid = region_info[2];
+                region = region_info[3];
+            }
+
+            this.inst().sendRequest({pid: pid,
+                                     tid: tid,
+                                     region: region,
                                      threshold: 1.0 * parseFloat($(
                                          '#linuxperf_threshold_input').val()) / 100},
                                     result => {
