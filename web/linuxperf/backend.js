@@ -365,7 +365,7 @@ class TimelineWindow extends Window {
              width="24px" fill="#ff0000">
           <!-- The line below cannot be broken into multiple ones, so it must
                exceed ~80 characters -->
-          <title>WARNING: The difference between the exact and sampled runtime is <span class="sampled_diff"></span>%, which exceeds <span class="runtime_diff_threshold">50</span>%!&#xA;&#xA;For accurate results, you may need to increase the on-CPU and/or off-CPU sampling frequency (depending on whether the process/thread runs mostly on- or off-CPU).</title>
+          <title>WARNING: The difference between the exact and sampled runtime is <span class="sampled_diff"></span>%, which exceeds <span class="runtime_diff_threshold">50</span>%!&#xA;&#xA;For accurate results, you may need to change the sampling frequency and/or the "region_save_on_first" option in case of code regions.</title>
         </svg>
 </div>`)
                         }
