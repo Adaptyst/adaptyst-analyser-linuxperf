@@ -338,13 +338,15 @@ class LinuxperfModule(Module):
 
         # Untimed
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'untimed.json'
+            start_path = self._path / metric / str(pid) / str(tid) / \
+                'untimed.json'
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
         # Timed
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'timed.json'
+            start_path = self._path / metric / str(pid) / str(tid) / \
+                'timed.json'
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
@@ -599,7 +601,6 @@ class LinuxperfModule(Module):
 
         def node_to_dict(node, is_root):
             process_name, pid_tid, start_time, runtime = node.tag
-            pid_tid_code = pid_tid.replace('/', '_')
             pid, tid = pid_tid.split('/')
 
             start_time = to_ms(start_time)
@@ -621,7 +622,8 @@ class LinuxperfModule(Module):
                         offcpu_regions.append((to_ms(int(a)),
                                                to_ms(int(b))))
 
-            thread_specific_metadata_path = self._path / 'walltime' / pid / tid / 'dirmeta.json'
+            thread_specific_metadata_path = self._path / 'walltime' / \
+                pid / tid / 'dirmeta.json'
 
             if thread_specific_metadata_path.exists():
                 with thread_specific_metadata_path.open(mode='r') as f:
@@ -695,10 +697,10 @@ class LinuxperfModule(Module):
 
     def process_post_request(self, data):
         if 'thread_tree' in data or \
-          'general_analysis' in data or \
-          ('pid' in data and 'tid' in data and
-           'threshold' in data) or \
-          'callchain' in data or 'src' in data:
+           'general_analysis' in data or \
+           ('pid' in data and 'tid' in data and
+            'threshold' in data) or \
+           'callchain' in data or 'src' in data:
             if 'thread_tree' in data:
                 return self.get_json_tree()
             elif 'general_analysis' in data:
