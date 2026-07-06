@@ -283,6 +283,16 @@ class LinuxperfModule(Module):
         else:
             return None
 
+    def get_timeline_window(self):
+        """
+        Get a TimelineWindow object (an adaptystanalyser.Window subclass)
+        corresponding to the timeline view of all threads/processes
+        captured during a linuxperf performance analysis session. This
+        can be used e.g. to save a single window arrangement with the
+        timeline and share it with others programmatically.
+        """
+        return TimelineWindow(self.get_session(), self)
+
     @Module.needs_loading
     def get_flame_graph_window(self, pid, tid):
         """
