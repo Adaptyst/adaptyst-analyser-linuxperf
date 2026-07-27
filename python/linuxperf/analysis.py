@@ -884,7 +884,7 @@ class LinuxperfModule(Module):
 
                 return result
 
-        return '', 401
+        return '', 400
 
 
 def get_mod_obj(session_id, entity, analysable, options):
