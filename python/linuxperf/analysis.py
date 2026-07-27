@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 CERN
+# SPDX-FileCopyrightText: 2026 CERN
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import re
@@ -8,24 +8,129 @@ from zipfile import ZipFile
 from zipfile import Path as ZipFilePath
 from treelib import Tree
 from pathlib import Path
-from collections import deque, defaultdict
+from collections import deque
+from adaptystanalyser import \
+    Module, Identifier, Session, Window, Analysable
 
 
-class LinuxPerfResults:
-    def __init__(self, storage: str, identifier: str,
-                 entity: str, node: str):
-        self._entity_path = Path(storage) / identifier / 'system' / \
-            entity
-        self._path = self._entity_path / node / 'linuxperf'
+class TimelineWindow(Window):
+    def __init__(self, session: Session, module: Module):
+        """
+        Construct a TimelineWindow object.
+
+        :param Session session: Instance of a performance analysis
+                                session.
+        :param Module module: Instance of a module the timeline
+                              window belongs to (this is always
+                              a LinuxperfModule object).
+        """
+        self._session = session
+        self._module = module
+
+    def get_module(self) -> Module:
+        return self._module
+
+    def get_type(self) -> str:
+        return 'linuxperf_timeline'
+
+    def get_constr_args(self) -> list:
+        return []
+
+    def get_dependencies(self) -> list:
+        return []
+
+    def get_data(self):
+        return None
+
+    def get_session(self) -> Session:
+        return self._session
+
+    def get_analysable(self) -> Analysable:
+        return self._module.get_analysable()
+
+    def get_init_data(self):
+        return None
+
+
+class FlameGraphWindow(Window):
+    def __init__(self, timeline_window: TimelineWindow,
+                 pid: int, tid: int):
+        """
+        Construct a FlameGraphWindow object.
+
+        :param TimelineWindow timeline_window: Instance of a timeline
+                                               window (the web side
+                                               uses this for getting
+                                               data necessary for displaying
+                                               flame graphs).
+        :param int pid: PID of a thread/process for which flame graphs
+                        should be displayed.
+        :param int tid: TID of a thread/process for which flame graphs
+                        should be displayed.
+        """
+        self._timeline_window = timeline_window
+        self._pid = pid
+        self._tid = tid
+
+    def get_module(self) -> Module:
+        return self._timeline_window.get_module()
+
+    def get_type(self) -> str:
+        return 'linuxperf_flame_graph'
+
+    def get_constr_args(self) -> list:
+        return []
+
+    def get_dependencies(self) -> list:
+        return [self._timeline_window]
+
+    def get_data(self):
+        return None
+
+    def get_init_data(self):
+        return {
+            'timeline_group_id': f'{self._pid}_{self._tid}'
+        }
+
+    def get_analysable(self) -> Analysable:
+        return self.get_module().get_analysable()
+
+    def get_session(self) -> Session:
+        return self._timeline_window.get_session()
+
+
+class LinuxperfModule(Module):
+    def __init__(self, session_id: Identifier, entity: str,
+                 node: str):
+        """
+        Construct a LinuxperfModule object.
+
+        :param Identifier session_id: Performance analysis
+                                      session information in form
+                                      of an Identifier object.
+        :param str entity: Name of the entity of a node where
+                           the module is attached.
+        :param str node: Name of the node where the module is
+                         attached.
+        """
+        self._entity_path = session_id.get_detailed_path(entity)
+        self._path = session_id.get_detailed_path(entity, node,
+                                                  self.get_name())
 
         self._threads_metadata = None
-
-        with (self._path / 'threads.json').open(mode='r') as f:
-            self._threads_metadata = json.load(f)
 
         self._metrics = {}
         self._roofline_info = {}
         self._thread_tree = None
+
+        self._general_metrics = {}
+        self._sources = {}
+        self._source_index = {}
+        self._source_zip_path = None
+
+    def _load(self):
+        with (self._path / 'threads.json').open(mode='r') as f:
+            self._threads_metadata = json.load(f)
 
         for metric in filter(Path.is_dir, self._path.glob('*')):
             metric_path = metric / 'dirmeta.json'
@@ -79,16 +184,10 @@ class LinuxPerfResults:
                                 ]
                             }
 
-        self._general_metrics = {}
-
         if (self._path / 'roofline.csv').exists():
             self._general_metrics['roofline'] = {
                 'title': 'Cache-aware roofline model'
             }
-
-        self._sources = {}
-        self._source_index = {}
-        self._source_zip_path = None
 
         if (self._path / 'sources.json').exists():
             with (self._path / 'sources.json').open(
@@ -113,18 +212,80 @@ class LinuxPerfResults:
                             index_str = f.read()
 
                         self._source_index = json.loads(index_str)
-                        with src_index_path.open(mode='w') as f:
-                            f.write(index_str)
 
+                        # TODO: Unpack this *outside* of the session
+                        #
+                        # with src_index_path.open(mode='w') as f:
+                        #     f.write(index_str)
+
+    def get_name(self):
+        return 'linuxperf'
+
+    @Module.needs_loading
     def get_general_analysis(self, analysis_type):
         """
         Get general analysis data of a specified type. If the type
-        does not exist, None is returned.
+        does not exist or the corresponding data could not be
+        read, None is returned.
 
-        :param str analysis_type: The type of a general analysis which
-                                  data should be returned for, e.g.
-                                  "roofline" for a cache-aware roofline
-                                  model.
+        Currently-supported general analysis types:
+        * "roofline": cache-aware roofline benchmark analysis of
+          a machine produced by the CARM Tool by INESC-ID
+          (https://github.com/champ-hub/carm-roofline).
+          The return value is a dictionary with the following structure:
+          {
+            "type": "roofline",
+            "l1": <L1 cache size in bytes>,
+            "l2": <L2 cache size in bytes>,
+            "l3": <L3 cache size in bytes>,
+            "models": <array of roofline models>
+          }
+
+          Each element of the array of roofline models has the following
+          structure (for all references to --<option>, go to
+          https://github.com/champ-hub/carm-roofline#how-to-use-cli):
+          {
+            "isa": "<instruction set architecture: see --isa for the
+                     possible values>",
+            "precision": "<floating-point precision: see --precision
+                           for the format>",
+            "threads": "<number of threads>",
+            "loads": "<number of loads>",
+            "stores": "<number of stores>",
+            "interleaved": "<whether cores belong to interleaved NUMA domains:
+                             the value is either Yes or No, see --interleaved
+                             for more details>",
+            "dram_bytes": "<number of DRAM bytes>",
+            "fp_inst": "<floating-point instruction used: see --inst for
+                         the format>",
+            "l1": {
+              "gbps": "<L1 performance in GB/s>",
+              "instpc"; "<L1 instructions per cycle>"
+            },
+            "l2": {
+              "gbps": "<L2 performance in GB/s>",
+              "instpc": "<L2 instructions per cycle>"
+            },
+            "l3": {
+              "gbps": "<L3 performance in GB/s>",
+              "instpc": "<L3 instructions per cycle>"
+            },
+            "dram": {
+              "gbps": "<DRAM performance in GB/s>",
+              "instpc": "<DRAM instructions per cycle>"
+            },
+            "fp": {
+              "gflops": "<floating-point performance in GFLOPS>",
+              "instpc": "<floating-point instructions per cycle>"
+            },
+            "fp_fma": {
+              "gflops": "<floating-point FMA performance in GFLOPS>",
+              "instpc": "<floating-point FMA instructions per cycle>"
+            }
+        }
+
+        :param str analysis_type: Type of a general analysis which
+                                  data should be returned for.
         """
         if analysis_type == 'roofline':
             p = self._path / 'roofline.csv'
@@ -213,14 +374,53 @@ class LinuxPerfResults:
         else:
             return None
 
+    def get_timeline_window(self):
+        """
+        Get a TimelineWindow object (an adaptystanalyser.Window subclass)
+        corresponding to the timeline view of all threads/processes
+        captured during a linuxperf performance analysis session. This
+        can be used e.g. to save a single window arrangement with the
+        timeline and share it with others programmatically
+        (use Window.save_arrgmt() and Window.get_arrgmt_url() for this).
+        """
+        return TimelineWindow(self.get_session(), self)
+
+    @Module.needs_loading
+    def get_flame_graph_window(self, pid: int, tid: int):
+        """
+        Get a FlameGraphWindow object (an adaptystanalyser.Window subclass)
+        corresponding to a flame graph of a thread/process with the given
+        PID and TID. This can be used e.g. to save a single window
+        arrangement with a given flame graph and share it with others
+        programmatically (use Window.save_arrgmt() and Window.get_arrgmt_url()
+        for this).
+
+        If no valid value of PID and/or TID is provided, None is returned.
+
+        :param int pid: PID of a thread/process.
+        :param int tid: TID of a thread/process.
+        """
+        tree = self.get_thread_tree()
+        node = tree.get_node(str(tid))
+
+        if node is None:
+            return None
+
+        if node.tag[1] != f'{pid}/{tid}':
+            return None
+
+        return FlameGraphWindow(TimelineWindow(self.get_session(), self),
+                                pid, tid)
+
+    @Module.needs_loading
     def get_flame_graph(self, pid, tid, compress_threshold):
         """
         Get a flame graph of the thread/process with a given PID and TID
         to be rendered by d3-flame-graph, taking into account to collapse
         blocks taking less than a specified share of total samples.
 
-        :param int pid: The PID of a thread/process in the session.
-        :param int tid: The TID of a thread/process in the session.
+        :param int pid: PID of a thread/process.
+        :param int tid: TID of a thread/process.
         :param float compress_threshold: A compression threshold. For
                                          example, if its value is 0.10,
                                          blocks taking less than 10% of
@@ -233,13 +433,15 @@ class LinuxPerfResults:
 
         # Untimed
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'untimed.json'
+            start_path = self._path / metric / str(pid) / str(tid) / \
+                'untimed.json'
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
         # Timed
         for metric in data.keys():
-            start_path = self._path / metric / str(pid) / str(tid) / 'timed.json'
+            start_path = self._path / metric / str(pid) / str(tid) / \
+                'timed.json'
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
@@ -390,37 +592,69 @@ class LinuxPerfResults:
 
         return json.dumps(data)
 
-    def get_callchain_mappings(self):
+    @Module.needs_loading
+    def get_callchain_mappings(self, event_type=None):
         """
-        Get a JSON object string representing dictionaries mapping compressed
-        callchain names to full symbol and library/executable names.
+        Get a dictionary mapping compressed callchain names of a given
+        event type to a two-element array [<full symbol name>,
+        <library/executable name>].
 
-        Inside the object, the dictionaries are grouped by event types, e.g.
-        "syscalls" has the mappings between compressed callchain names
-        captured during tree profiling and full symbol and
-        library/executable names.
+        If event_type is None (by default), a wrapper dictionary is
+        returned for all available event types with structure
+        {
+          "<event type>": <result of get_callchain_mappings("<event type>")>
+        }
+
+        If event_type is "syscall", a dictionary for compressed
+        callchain names captured during thread/process tree profiling
+        is returned.
+
+        If event_type is invalid or does not exist, None is returned.
         """
-        result_dict = {}
 
-        if (self._path / 'callchains.json').exists():
-            with (self._path / 'callchains.json').open(mode='r') as f:
-                result_dict['syscall'] = json.load(f)
+        if event_type is None:
+            result_dict = {}
 
-        for k in self._metrics.keys():
-            path = self._path / k / 'callchains.json'
+            if (self._path / 'callchains.json').exists():
+                with (self._path / 'callchains.json').open(mode='r') as f:
+                    result_dict['syscall'] = json.load(f)
 
-            if not path.exists():
-                continue
+            for k in self._metrics.keys():
+                path = self._path / k / 'callchains.json'
 
-            with path.open(mode='r') as f:
-                result_dict[k] = json.load(f)
+                if not path.exists():
+                    continue
 
-        return json.dumps(result_dict)
+                with path.open(mode='r') as f:
+                    result_dict[k] = json.load(f)
 
+            return result_dict
+        elif event_type == 'syscall':
+            if (self._path / 'callchains.json').exists():
+                with (self._path / 'callchains.json').open(mode='r') as f:
+                    return json.load(f)
+
+            return {}
+        else:
+            if event_type in self._metrics.keys():
+                path = self._path / event_type / 'callchains.json'
+
+                if not path.exists():
+                    return None
+
+                with path.open(mode='r') as f:
+                    return json.load(f)
+
+            return None
+
+    @Module.needs_loading
     def get_thread_tree(self) -> Tree:
         """
-        Get a treelib.Tree object representing the thread/process tree of
-        the session.
+        Get a treelib.Tree object representing the thread/process tree.
+
+        Each node corresponds to a thread/process: its identifier is equal
+        to the TID and its tag is in form of ["<thread/process name>",
+        "<PID>/<TID>", <exact start time in ns>, <exact runtime in ns>].
         """
         if self._thread_tree is not None:
             return self._thread_tree
@@ -433,13 +667,13 @@ class LinuxPerfResults:
         self._thread_tree = tree
         return tree
 
+    @Module.needs_loading
     def get_json_tree(self):
         """
-        Get a JSON object string representing the thread/process tree of
-        the session.
+        Get a JSON object string representing the thread/process tree.
 
         The returned object is the root, which describes the very first
-        process detected in the session along with its children.
+        process detected along with its children.
         The object has the following keys:
         * "id": the unique identifier of a thread/process in form of
           "<PID>_<TID>".
@@ -465,20 +699,13 @@ class LinuxPerfResults:
           metrics to their website titles and other auxiliary data (e.g.
           {"roofline": {"title": "Roofline model", ...}). This is set
           only for the root and it can be empty.
-        * "src": the JSON object mapping library/executable offsets to
-          lines within source code files. This is set only for the root
-          and it can be empty. The structure is as follows:
-          {"<library/executable path>":
-          {"<hex offset>": {"file": "<path>", "line": <number>}}}.
-          Refer to "src_index" (which is also returned by get_json_tree())
-          and use get_source_code() to obtain a source code corresponding to
-          <path>.
-        * "src_index": the JSON object mapping source code paths inside
-          "src" to shortened filenames that should be provided to
-          get_source_code(). This is set only for the root and it can be empty.
+        * "src": the return value of get_sources(), see its documentation
+          for the details. This is set only for the root.
+        * "src_index": the return value of get_source_index(), see its
+          documentation for the details. This is set only for the root.
         * "children": the list of all threads/processes spawned by the
           thread/process. Each element has the same structure as the root
-          except for "general_metrics" which is absent.
+          except for elements indicated as "set only for the root".
         * "roofline": the JSON object with information necessary for
           interpreting roofline profiling results. The structure is as follows:
           {"cpu_type": "<CPU type, e.g. Intel_x86>", "ai_keys": [<events for
@@ -493,7 +720,6 @@ class LinuxPerfResults:
 
         def node_to_dict(node, is_root):
             process_name, pid_tid, start_time, runtime = node.tag
-            pid_tid_code = pid_tid.replace('/', '_')
             pid, tid = pid_tid.split('/')
 
             start_time = to_ms(start_time)
@@ -515,7 +741,8 @@ class LinuxPerfResults:
                         offcpu_regions.append((to_ms(int(a)),
                                                to_ms(int(b))))
 
-            thread_specific_metadata_path = self._path / 'walltime' / pid / tid / 'dirmeta.json'
+            thread_specific_metadata_path = self._path / 'walltime' / \
+                pid / tid / 'dirmeta.json'
 
             if thread_specific_metadata_path.exists():
                 with thread_specific_metadata_path.open(mode='r') as f:
@@ -546,8 +773,8 @@ class LinuxPerfResults:
 
             if is_root:
                 to_return['general_metrics'] = self._general_metrics
-                to_return['src'] = self._sources
-                to_return['src_index'] = self._source_index
+                to_return['src'] = self.get_sources()
+                to_return['src_index'] = self.get_source_index()
                 to_return['roofline'] = self._roofline_info
 
             children = tree.children(node.identifier)
@@ -565,14 +792,44 @@ class LinuxPerfResults:
             return json.dumps(node_to_dict(tree.get_node(tree.root),
                                            True))
 
+    @Module.needs_loading
+    def get_sources(self):
+        """
+        Get the dictionary mapping library/executable offsets to
+        lines within source code files. It can be empty.
+
+        The structure is as follows:
+        {
+          "<library/executable path>": {
+            "<hex offset>": {
+              "file": "<path>",
+              "line": <number>
+            }
+          }
+        }
+
+        Use get_source_code() along with get_source_index() to obtain
+        a source code corresponding to <path>.
+        """
+        return self._sources
+
+    @Module.needs_loading
+    def get_source_index(self):
+        """
+        Get the dictionary mapping source code paths from get_sources()
+        to shortened filenames that should be provided to get_source_code().
+        It can be empty.
+        """
+        return self._source_index
+
+    @Module.needs_loading
     def get_source_code(self, filename):
         """
-        Get a source code stored in the session under a specified
+        Get a source code stored in the module results under a specified
         name.
 
-        :param str filename: The name of a source code to be
-                             obtained. It must come from "src_index"
-                             produced by get_thread_tree().
+        :param str filename: Name of a source code to be
+                             obtained. It must come from get_source_index().
         """
         if self._source_zip_path is None:
             return None
@@ -586,45 +843,49 @@ class LinuxPerfResults:
             with path.open() as f:
                 return f.read()
 
+    def process_post_request(self, data):
+        """
+        Please see the REST API documentation of the linuxperf
+        module for the structure of POST requests here.
+        """
+        if 'thread_tree' in data or \
+           'general_analysis' in data or \
+           ('pid' in data and 'tid' in data and
+            'threshold' in data) or \
+           'callchain' in data or 'src' in data:
+            if 'thread_tree' in data:
+                return self.get_json_tree()
+            elif 'general_analysis' in data:
+                json_data = self.get_general_analysis(
+                    data['general_analysis'])
 
-def process(storage, identifier, entity, node, data):
-    if 'thread_tree' in data or \
-       'general_analysis' in data or \
-       ('pid' in data and 'tid' in data and
-        'threshold' in data) or \
-       'callchain' in data or 'src' in data:
-        results = LinuxPerfResults(storage, identifier,
-                                   entity, node)
+                if json_data is None:
+                    return '', 404
+                else:
+                    return json_data
+            elif 'pid' in data and 'tid' in data and \
+                 'threshold' in data:
+                json_data = self.get_flame_graph(
+                    data['pid'],
+                    data['tid'],
+                    float(data['threshold']))
 
-        if 'thread_tree' in data:
-            return results.get_json_tree()
-        elif 'general_analysis' in data:
-            json_data = results.get_general_analysis(
-                data['general_analysis'])
+                if json_data is None:
+                    return '', 404
+                else:
+                    return json_data
+            elif 'callchain' in data:
+                return json.dumps(self.get_callchain_mappings())
+            elif 'src' in data:
+                result = self.get_source_code(data['src'])
 
-            if json_data is None:
-                return '', 404
-            else:
-                return json_data
-        elif 'pid' in data and 'tid' in data and \
-             'threshold' in data:
-            json_data = results.get_flame_graph(
-                data['pid'],
-                data['tid'],
-                float(data['threshold']))
+                if result is None:
+                    return '', 404
 
-            if json_data is None:
-                return '', 404
-            else:
-                return json_data
-        elif 'callchain' in data:
-            return results.get_callchain_mappings()
-        elif 'src' in data:
-            result = results.get_source_code(data['src'])
+                return result
 
-            if result is None:
-                return '', 404
-
-            return result
-    else:
         return '', 400
+
+
+def get_mod_obj(session_id, entity, analysable, options):
+    return LinuxperfModule(session_id, entity, analysable)
