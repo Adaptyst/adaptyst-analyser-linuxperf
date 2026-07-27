@@ -4,11 +4,12 @@
 import re
 import json
 import csv
+import sys
 from zipfile import ZipFile
 from zipfile import Path as ZipFilePath
 from treelib import Tree
 from pathlib import Path
-from collections import deque
+from collections import deque, defaultdict
 from adaptystanalyser import \
     Module, Identifier, Session, Window, Analysable
 
@@ -131,6 +132,9 @@ class LinuxperfModule(Module):
     def _load(self):
         with (self._path / 'threads.json').open(mode='r') as f:
             self._threads_metadata = json.load(f)
+
+        with (self._path / 'dirmeta.json').open(mode='r') as f:
+            self._metadata = json.load(f)
 
         for metric in filter(Path.is_dir, self._path.glob('*')):
             metric_path = metric / 'dirmeta.json'
@@ -413,7 +417,7 @@ class LinuxperfModule(Module):
                                 pid, tid)
 
     @Module.needs_loading
-    def get_flame_graph(self, pid, tid, compress_threshold):
+    def get_flame_graph(self, pid, tid, compress_threshold, region=None):
         """
         Get a flame graph of the thread/process with a given PID and TID
         to be rendered by d3-flame-graph, taking into account to collapse
@@ -434,14 +438,14 @@ class LinuxperfModule(Module):
         # Untimed
         for metric in data.keys():
             start_path = self._path / metric / str(pid) / str(tid) / \
-                'untimed.json'
+                ('untimed.json' if region is None else f'{region}_untimed.json')
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
         # Timed
         for metric in data.keys():
             start_path = self._path / metric / str(pid) / str(tid) / \
-                'timed.json'
+                ('timed.json' if region is None else f'{region}_timed.json')
             with start_path.open(mode='r') as f:
                 data[metric].append(json.load(f))
 
@@ -758,8 +762,8 @@ class LinuxperfModule(Module):
 
             to_return = {
                 'id': pid_tid.replace('/', '_'),
-                'start_time': start_time,
-                'runtime': runtime,
+                'start_time': [start_time],
+                'runtime': [runtime],
                 'sampled_time': total_sampled_time,
                 'name': process_name,
                 'pid_tid': pid_tid,
@@ -767,7 +771,7 @@ class LinuxperfModule(Module):
                 'start_callchain': self._threads_metadata[
                     'spawning_callchains'].get(
                     tid, []),
-                'metrics': self._metrics,
+                'metrics': [] if self._metadata['regions_only'] else self._metrics,
                 'children': []
             }
 
@@ -776,13 +780,71 @@ class LinuxperfModule(Module):
                 to_return['src'] = self.get_sources()
                 to_return['src_index'] = self.get_source_index()
                 to_return['roofline'] = self._roofline_info
+                to_return['regions_only'] = self._metadata['regions_only']
+
+            code_regions_path = self._path / 'walltime' / pid / tid / 'regions.dat'
+
+            if code_regions_path.exists():
+                code_regions = defaultdict(list)
+                with code_regions_path.open(mode='r') as f:
+                    for i, line in enumerate(f):
+                        line = line.strip()
+
+                        if len(line) == 0:
+                            continue
+
+                        m = re.search(r'^(.+) (\d+) (\d+)$', line)
+
+                        if m is None:
+                            print(f'Warning: Invalid line {i + 1} in {str(code_regions_path)}',
+                                  file=sys.stderr)
+                            continue
+
+                        code_regions[m.group(1)].append((int(m.group(2)),
+                                                         int(m.group(3))))
+
+                for name, times in code_regions.items():
+                    sampled_time = \
+                        to_ms(thread_specific_metadata.get('sampled_period_' + name, None))
+
+                    if sampled_time is None:
+                        sampled_time = length
+
+                    starts = []
+                    lengths = []
+                    off_cpus = []
+
+                    for start, length in times:
+                        start_num = to_ms(int(start))
+                        length_num = to_ms(int(length))
+
+                        starts.append(start_num)
+                        lengths.append(length_num)
+
+                        for off_cpu_start, off_cpu_length in offcpu_regions:
+                            if off_cpu_start >= start_num and \
+                               off_cpu_start <= start_num + length_num:
+                                off_cpus.append((off_cpu_start,
+                                                 off_cpu_length))
+
+                    code_region_item = {
+                        'id': pid_tid.replace('/', '_') + '_' + name,
+                        'start_time': starts,
+                        'runtime': lengths,
+                        'sampled_time': sampled_time,
+                        'name': name,
+                        'pid_tid': pid_tid,
+                        'off_cpu': off_cpus,
+                        'metrics': self._metrics,
+                        'children': []
+                    }
+
+                    to_return['children'].append(code_region_item)
 
             children = tree.children(node.identifier)
 
-            if len(children) > 0:
-                for child in children:
-                    to_return['children'].append(node_to_dict(child,
-                                                              False))
+            for child in children:
+                to_return['children'].append(node_to_dict(child, False))
 
             return to_return
 
@@ -868,7 +930,8 @@ class LinuxperfModule(Module):
                 json_data = self.get_flame_graph(
                     data['pid'],
                     data['tid'],
-                    float(data['threshold']))
+                    float(data['threshold']),
+                    data.get('region', None))
 
                 if json_data is None:
                     return '', 404
