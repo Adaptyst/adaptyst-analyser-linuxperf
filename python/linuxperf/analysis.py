@@ -212,8 +212,11 @@ class LinuxperfModule(Module):
                             index_str = f.read()
 
                         self._source_index = json.loads(index_str)
-                        with src_index_path.open(mode='w') as f:
-                            f.write(index_str)
+
+                        # TODO: Unpack this *outside* of the session
+                        #
+                        # with src_index_path.open(mode='w') as f:
+                        #     f.write(index_str)
 
     def get_name(self):
         return 'linuxperf'
