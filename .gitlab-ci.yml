@@ -41,7 +41,7 @@ python-docs-gen:
       fi
   script:
     - export ADAPTYST_ANALYSER_PATH=$CI_PROJECT_DIR/adaptyst-analyser
-    - sphinx-build -b html docs/python docs/python/_build
+    - sphinx-build -W -b html docs/python docs/python/_build
   artifacts:
     paths:
       - docs/python/_build
