@@ -26,7 +26,8 @@ python-docs-gen:
   stage: docs
   before_script:
     - pip install -U sphinx
-    - if [[ $CI_COMMIT_BRANCH == "" ]]; then
+    - |
+      if [[ $CI_COMMIT_BRANCH == "" ]]; then
         git clone $ADAPTYST_ANALYSER_REPO_URL $CI_PROJECT_DIR/adaptyst-analyser
       else
         git clone $ADAPTYST_ANALYSER_REPO_URL -b $CI_COMMIT_BRANCH $CI_PROJECT_DIR/adaptyst-analyser
