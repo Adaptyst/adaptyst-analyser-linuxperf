@@ -33,6 +33,12 @@ python-docs-gen:
         git clone $ADAPTYST_ANALYSER_REPO_URL -b $CI_COMMIT_BRANCH $CI_PROJECT_DIR/adaptyst-analyser
       fi
     - pip install $CI_PROJECT_DIR/adaptyst-analyser
+    - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq && chmod +x yq
+    - ./yq -e '.python_dependencies' metadata.yml | while IFS= read -r l; do echo ${l:2} >> requirements.txt; done || true
+    - |
+      if [ -f "requirements.txt" ]; then
+        pip install -r requirements.txt
+      fi
   script:
     - export ADAPTYST_ANALYSER_PATH=$CI_PROJECT_DIR/adaptyst-analyser
     - sphinx-build -b html docs/python docs/python/_build
