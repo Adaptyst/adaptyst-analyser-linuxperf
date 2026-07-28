@@ -233,60 +233,63 @@ class LinuxperfModule(Module):
         read, None is returned.
 
         Currently-supported general analysis types:
+
         * "roofline": cache-aware roofline benchmark analysis of
           a machine produced by the CARM Tool by INESC-ID
           (https://github.com/champ-hub/carm-roofline).
-          The return value is a dictionary with the following structure:
-          {
-            "type": "roofline",
-            "l1": <L1 cache size in bytes>,
-            "l2": <L2 cache size in bytes>,
-            "l3": <L3 cache size in bytes>,
-            "models": <array of roofline models>
-          }
+          The return value is a dictionary with the following structure::
+
+            {
+              "type": "roofline",
+              "l1": <L1 cache size in bytes>,
+              "l2": <L2 cache size in bytes>,
+              "l3": <L3 cache size in bytes>,
+              "models": <array of roofline models>
+            }
 
           Each element of the array of roofline models has the following
           structure (for all references to --<option>, go to
-          https://github.com/champ-hub/carm-roofline#how-to-use-cli):
-          {
-            "isa": "<instruction set architecture: see --isa for the
-                     possible values>",
-            "precision": "<floating-point precision: see --precision
-                           for the format>",
-            "threads": "<number of threads>",
-            "loads": "<number of loads>",
-            "stores": "<number of stores>",
-            "interleaved": "<whether cores belong to interleaved NUMA domains:
-                             the value is either Yes or No, see --interleaved
-                             for more details>",
-            "dram_bytes": "<number of DRAM bytes>",
-            "fp_inst": "<floating-point instruction used: see --inst for
-                         the format>",
-            "l1": {
-              "gbps": "<L1 performance in GB/s>",
-              "instpc"; "<L1 instructions per cycle>"
-            },
-            "l2": {
-              "gbps": "<L2 performance in GB/s>",
-              "instpc": "<L2 instructions per cycle>"
-            },
-            "l3": {
-              "gbps": "<L3 performance in GB/s>",
-              "instpc": "<L3 instructions per cycle>"
-            },
-            "dram": {
-              "gbps": "<DRAM performance in GB/s>",
-              "instpc": "<DRAM instructions per cycle>"
-            },
-            "fp": {
-              "gflops": "<floating-point performance in GFLOPS>",
-              "instpc": "<floating-point instructions per cycle>"
-            },
-            "fp_fma": {
-              "gflops": "<floating-point FMA performance in GFLOPS>",
-              "instpc": "<floating-point FMA instructions per cycle>"
+          https://github.com/champ-hub/carm-roofline#how-to-use-cli)::
+
+            {
+              "isa": "<instruction set architecture: see --isa for the
+                       possible values>",
+              "precision": "<floating-point precision: see --precision
+                             for the format>",
+              "threads": "<number of threads>",
+              "loads": "<number of loads>",
+              "stores": "<number of stores>",
+              "interleaved": "<whether cores belong to interleaved NUMA domains:
+                               the value is either Yes or No, see --interleaved
+                               for more details>",
+              "dram_bytes": "<number of DRAM bytes>",
+              "fp_inst": "<floating-point instruction used: see --inst for
+                           the format>",
+              "l1": {
+                "gbps": "<L1 performance in GB/s>",
+                "instpc"; "<L1 instructions per cycle>"
+              },
+              "l2": {
+                "gbps": "<L2 performance in GB/s>",
+                "instpc": "<L2 instructions per cycle>"
+              },
+              "l3": {
+                "gbps": "<L3 performance in GB/s>",
+                "instpc": "<L3 instructions per cycle>"
+              },
+              "dram": {
+                "gbps": "<DRAM performance in GB/s>",
+                "instpc": "<DRAM instructions per cycle>"
+              },
+              "fp": {
+                "gflops": "<floating-point performance in GFLOPS>",
+                "instpc": "<floating-point instructions per cycle>"
+              },
+              "fp_fma": {
+                "gflops": "<floating-point FMA performance in GFLOPS>",
+                "instpc": "<floating-point FMA instructions per cycle>"
+              }
             }
-        }
 
         :param str analysis_type: Type of a general analysis which
                                   data should be returned for.
@@ -604,10 +607,11 @@ class LinuxperfModule(Module):
         <library/executable name>].
 
         If event_type is None (by default), a wrapper dictionary is
-        returned for all available event types with structure
-        {
-          "<event type>": <result of get_callchain_mappings("<event type>")>
-        }
+        returned for all available event types with the following structure::
+
+          {
+            "<event type>": <result of get_callchain_mappings("<event type>")>
+          }
 
         If event_type is "syscall", a dictionary for compressed
         callchain names captured during thread/process tree profiling
@@ -679,6 +683,7 @@ class LinuxperfModule(Module):
         The returned object is the root, which describes the very first
         process detected along with its children.
         The object has the following keys:
+
         * "id": the unique identifier of a thread/process in form of
           "<PID>_<TID>".
         * "start_time": the timestamp of the moment when the thread/process
@@ -697,11 +702,11 @@ class LinuxperfModule(Module):
         * "metrics": the JSON object mapping extra per-thread profiling metrics
           (in addition to on-CPU/off-CPU activity) to their website titles
           and their type (i.e. flame-graph-related or not flame-graph-related).
-          An example object is {"page-faults": {"title": "Page faults",
-          "flame_graph": true}}. The structure can also be empty.
+          An example object is ``{"page-faults": {"title": "Page faults",
+          "flame_graph": true}}``. The structure can also be empty.
         * "general_metrics": the JSON object mapping general profiling
           metrics to their website titles and other auxiliary data (e.g.
-          {"roofline": {"title": "Roofline model", ...}). This is set
+          ``{"roofline": {"title": "Roofline model", ...}``). This is set
           only for the root and it can be empty.
         * "src": the return value of get_sources(), see its documentation
           for the details. This is set only for the root.
@@ -712,9 +717,9 @@ class LinuxperfModule(Module):
           except for elements indicated as "set only for the root".
         * "roofline": the JSON object with information necessary for
           interpreting roofline profiling results. The structure is as follows:
-          {"cpu_type": "<CPU type, e.g. Intel_x86>", "ai_keys": [<events for
+          ``{"cpu_type": "<CPU type, e.g. Intel_x86>", "ai_keys": [<events for
           calculating arithmetic intensity>], "instr_keys": [<events for
-          calculating FLOPS etc.>]}. This is set only for the root and
+          calculating FLOPS etc.>]}``. This is set only for the root and
           it can be empty.
         """
         def to_ms(num):
@@ -860,15 +865,16 @@ class LinuxperfModule(Module):
         Get the dictionary mapping library/executable offsets to
         lines within source code files. It can be empty.
 
-        The structure is as follows:
-        {
-          "<library/executable path>": {
-            "<hex offset>": {
-              "file": "<path>",
-              "line": <number>
+        The structure is as follows::
+
+          {
+            "<library/executable path>": {
+              "<hex offset>": {
+                "file": "<path>",
+                "line": <number>
+              }
             }
           }
-        }
 
         Use get_source_code() along with get_source_index() to obtain
         a source code corresponding to <path>.
