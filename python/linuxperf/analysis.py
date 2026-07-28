@@ -248,7 +248,7 @@ class LinuxperfModule(Module):
             }
 
           Each element of the array of roofline models has the following
-          structure (for all references to --<option>, go to
+          structure (for all references to \\-\\-<option>, go to
           https://github.com/champ-hub/carm-roofline#how-to-use-cli)::
 
             {
@@ -603,8 +603,8 @@ class LinuxperfModule(Module):
     def get_callchain_mappings(self, event_type=None):
         """
         Get a dictionary mapping compressed callchain names of a given
-        event type to a two-element array [<full symbol name>,
-        <library/executable name>].
+        event type to a two-element array ``[<full symbol name>,
+        <library/executable name>]``.
 
         If event_type is None (by default), a wrapper dictionary is
         returned for all available event types with the following structure::
@@ -661,8 +661,8 @@ class LinuxperfModule(Module):
         Get a treelib.Tree object representing the thread/process tree.
 
         Each node corresponds to a thread/process: its identifier is equal
-        to the TID and its tag is in form of ["<thread/process name>",
-        "<PID>/<TID>", <exact start time in ns>, <exact runtime in ns>].
+        to the TID and its tag is in form of ``["<thread/process name>",
+        "<PID>/<TID>", <exact start time in ns>, <exact runtime in ns>]``.
         """
         if self._thread_tree is not None:
             return self._thread_tree
@@ -684,38 +684,38 @@ class LinuxperfModule(Module):
         process detected along with its children.
         The object has the following keys:
 
-        * "id": the unique identifier of a thread/process in form of
+        * **id**: the unique identifier of a thread/process in form of
           "<PID>_<TID>".
-        * "start_time": the timestamp of the moment when the thread/process
-           was effectively started, in milliseconds.
-        * "runtime": the number of milliseconds the thread/process was
+        * **start_time**: the timestamp of the moment when the thread/process
+          was effectively started, in milliseconds.
+        * **runtime**: the number of milliseconds the thread/process was
           running for.
-        * "sampled_time": the number of milliseconds the thread/process
+        * **sampled_time**: the number of milliseconds the thread/process
           was running for, as sampled by "perf".
-        * "name": the process name.
-        * "pid_tid": the PID and TID pair string in form of "<PID>/<TID>".
-        * "off_cpu": the list of intervals when the thread/process was
+        * **name**: the process name.
+        * **pid_tid**: the PID and TID pair string in form of "<PID>/<TID>".
+        * **off_cpu**: the list of intervals when the thread/process was
           off-CPU. Each interval is in form of (a, b), where a is the
           start time of an off-CPU interval and b is the length of such
           interval.
-        * "start_callchain": the callchain spawning the thread/process.
-        * "metrics": the JSON object mapping extra per-thread profiling metrics
+        * **start_callchain**: the callchain spawning the thread/process.
+        * **metrics**: the JSON object mapping extra per-thread profiling metrics
           (in addition to on-CPU/off-CPU activity) to their website titles
           and their type (i.e. flame-graph-related or not flame-graph-related).
           An example object is ``{"page-faults": {"title": "Page faults",
           "flame_graph": true}}``. The structure can also be empty.
-        * "general_metrics": the JSON object mapping general profiling
+        * **general_metrics**: the JSON object mapping general profiling
           metrics to their website titles and other auxiliary data (e.g.
           ``{"roofline": {"title": "Roofline model", ...}``). This is set
           only for the root and it can be empty.
-        * "src": the return value of get_sources(), see its documentation
+        * **src**: the return value of get_sources(), see its documentation
           for the details. This is set only for the root.
-        * "src_index": the return value of get_source_index(), see its
+        * **src_index**: the return value of get_source_index(), see its
           documentation for the details. This is set only for the root.
-        * "children": the list of all threads/processes spawned by the
+        * **children**: the list of all threads/processes spawned by the
           thread/process. Each element has the same structure as the root
           except for elements indicated as "set only for the root".
-        * "roofline": the JSON object with information necessary for
+        * **roofline**: the JSON object with information necessary for
           interpreting roofline profiling results. The structure is as follows:
           ``{"cpu_type": "<CPU type, e.g. Intel_x86>", "ai_keys": [<events for
           calculating arithmetic intensity>], "instr_keys": [<events for
