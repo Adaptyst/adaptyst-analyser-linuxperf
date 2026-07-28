@@ -1,13 +1,16 @@
-# SPDX-FileCopyrightText: 2025 CERN
+# SPDX-FileCopyrightText: 2026 CERN
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "external_pull_request_event" || $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "web"
     - if: $CI_COMMIT_TAG != null
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 stages:
   - licensing-check
+  - docs
+  - docs-deploy
 
 reuse-lint:
   image:
@@ -15,5 +18,42 @@ reuse-lint:
     entrypoint: [""]
   stage: licensing-check
   script:
-    - cd $CI_PROJECT_DIR
     - reuse lint
+
+python-docs-gen:
+  image:
+    name: registry.cern.ch/docker.io/python:latest
+  stage: docs
+  before_script:
+    - pip install -U sphinx
+    - |
+      if [[ $CI_COMMIT_BRANCH == "" ]]; then
+        git clone $ADAPTYST_ANALYSER_REPO_URL $CI_PROJECT_DIR/adaptyst-analyser
+      else
+        git clone $ADAPTYST_ANALYSER_REPO_URL -b $CI_COMMIT_BRANCH $CI_PROJECT_DIR/adaptyst-analyser
+      fi
+    - pip install $CI_PROJECT_DIR/adaptyst-analyser
+    - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq && chmod +x yq
+    - ./yq -e '.python_dependencies' metadata.yml | while IFS= read -r l; do echo ${l:2} >> requirements.txt; done || true
+    - |
+      if [ -f "requirements.txt" ]; then
+        pip install -r requirements.txt
+      fi
+  script:
+    - export ADAPTYST_ANALYSER_PATH=$CI_PROJECT_DIR/adaptyst-analyser
+    - sphinx-build -W -b html docs/python docs/python/_build
+  artifacts:
+    paths:
+      - docs/python/_build
+    expire_in: 6 h
+
+python-docs-deploy:
+  image:
+    name: gitlab-registry.cern.ch/ci-tools/ci-web-deployer:latest
+  stage: docs-deploy
+  rules:
+    - if: $CI_COMMIT_TAG != null
+  script:
+    - export EOS_PATH=$EOS_PATH_PYTHON_DOCS
+    - mv docs/python/_build public
+    - deploy-eos

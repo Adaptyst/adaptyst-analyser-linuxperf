@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2025 CERN
+# SPDX-FileCopyrightText: 2026 CERN
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: linuxperf
-version: 0.1.0-dev.2026.02a
+version: 0.1.0-dev.2026.07a
 short_desc: CPU Linux-perf-based hardware module.
-min_module_version: [0, 1, 0, 3]
+min_module_version: [0, 1, 0, 5]
 
 python_dependencies:
   - treelib
