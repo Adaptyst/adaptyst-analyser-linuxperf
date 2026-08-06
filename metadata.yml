@@ -14,10 +14,9 @@ js_url_dependencies:
   - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.9.0/highlightjs-line-numbers.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css
-  - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.js
-  - https://unpkg.com/vis-timeline@8.3.1/dist/vis-timeline-graph2d.min.css
   - https://unpkg.com/chroma-js/dist/chroma.min.cjs
   - https://d3js.org/d3.v7.min.js
+  - https://raw.githubusercontent.com/Adaptyst/canvas-timeline/refs/tags/v0.1.0-dev.2026.08a/timeline.js
   - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph.min.js
   - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph.css
   - https://github.com/Adaptyst/d3-flame-graph/releases/download/v4.2.0/d3-flamegraph-tooltip.min.js

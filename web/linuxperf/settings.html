@@ -4,15 +4,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
 <div class="margin_bottom setting_item">
-  <label for="off_cpu_scale" id="linuxperf_off_cpu_scale_desc" class="setting_label_left">
-    Off-CPU timeline display scale:
+  <label for="timeline_font_size" class="setting_label_left">
+    Default timeline font size (px):
   </label>
-  <input name="off_cpu_scale"
-         id="linuxperf_off_cpu_scale"
-         type="range"
-         min="0" max="1"
-         step=".01"
-         value="1" />
+  <input type="number" name="timeline_font_size"
+         value="12" min="8" max="24" step="1"
+         id="linuxperf_timeline_font_size" />
 </div>
 <div class="margin_bottom setting_item">
   <label for="threshold_input" class="setting_label_left">
