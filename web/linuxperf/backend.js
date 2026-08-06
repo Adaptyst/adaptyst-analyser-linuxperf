@@ -21,11 +21,11 @@ class TimelineWindow extends Window {
     }
 
     startResize() {
-
+        return this.inst().getData().timeline != undefined;
     }
 
     finishResize() {
-
+        this.inst().getData().timeline.resize();
     }
 
     prepareRefresh() {
@@ -45,24 +45,31 @@ class TimelineWindow extends Window {
         <b><font color="#0294e3">blue parts</font></b> are off-CPU. <b>Right-click</b>
         any thread/process to open the details menu.
       </div>
-      <div class="off_cpu_sampling_warning">
-        <b><font color="#ff0000">WARNING:</font></b> The current off-CPU timeline
-        display scale is <span class="off_cpu_scale_value"></span>, which means that <b>the timeline does
-        not show off-CPU periods missing the sampling period of <span class="off_cpu_sampling_period"></span> ms!</b> <b><u>No</u></b> other analyses are affected.
-      </div>
-      <div class="no_off_cpu_warning">
-        <b><font color="#ff0000">WARNING:</font></b> The current off-CPU timeline
-        display scale is 0, which means that <b>the timeline does
-        not show any off-CPU periods!</b> <b><u>No</u></b> other analyses are affected.
-      </div>
     </div>
     <div class="toolbar_buttons">
-      <svg xmlns="http://www.w3.org/2000/svg" class="general_analyses" data-icon="general"
-         height="24px"
-         width="24px" fill="#000000"
-         onclick="" class="disabled">
-        <title>General analyses</title>
-      </svg>
+      <div class="toolbar_buttons_left">
+        <svg xmlns="http://www.w3.org/2000/svg" class="general_analyses disabled" data-icon="general"
+            height="24px"
+            width="24px" fill="#000000"
+            onclick="">
+          <title>General analyses</title>
+        </svg>
+      </div>
+      <div class="toolbar_buttons_right">
+        <!-- The SVGs below are from Google Material Icons, licensing:
+             SPDX-FileCopyrightText: Google
+             SPDX-License-Identifier: Apache-2.0 -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="pointer timeline_font_increase"
+             height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000">
+          <title>Increase timeline font size</title>
+          <path d="m40-200 210-560h100l210 560h-96l-51-143H187l-51 143H40Zm176-224h168l-82-232h-4l-82 232Zm504 104v-120H600v-80h120v-120h80v120h120v80H800v120h-80Z"/>
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="pointer timeline_font_decrease"
+             height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000">
+          <title>Decrease timeline font size</title>
+          <path d="m40-200 210-560h100l210 560h-96l-51-143H187l-51 143H40Zm176-224h168l-82-232h-4l-82 232Zm384-16v-80h320v80H600Z"/>
+        </svg>
+      </div>
     </div>
 </div>
 <div class="window_space linuxperf_timeline"></div>
@@ -71,8 +78,6 @@ class TimelineWindow extends Window {
 
     _setup(data, existing_window) {
         if (!existing_window) {
-            this.inst().getData().offcpu_sampling = 0;
-            this.inst().getData().show_no_off_cpu_warning = false;
             this.inst().getData().item_list = [];
             this.inst().getData().group_list = [];
             this.inst().getData().item_dict = {};
@@ -90,6 +95,8 @@ class TimelineWindow extends Window {
             this.inst().getData().src_cache = {};
             this.inst().getData().roofline_dict = {};
             this.inst().getData().roofline_info = {};
+            this.inst().getData().timeline_font_size = Math.max(
+                8, Math.min(24, $('#linuxperf_timeline_font_size').val()));
         }
 
         let from_json_to_item = (json, level,
@@ -101,7 +108,6 @@ class TimelineWindow extends Window {
                                  sampled_diff_dict,
                                  src_dict, src_index_dict,
                                  roofline_info,
-                                 max_off_cpu_sampling,
                                  regions_only) => {
                                      let id = json.id;
                                      let total_runtime = 0;
@@ -111,12 +117,12 @@ class TimelineWindow extends Window {
                                          let item = {
                                              id: json.id + '_' + i,
                                              group: json.id,
-                                             type: 'background',
-                                             content: '',
+                                             textColor: '#ffffff',
                                              start: json.start_time[i],
                                              end: json.start_time[i] + json.runtime[i],
-                                             style: ((is_region || !regions_only) ? 'background-color:#aa0000' :
-                                                     'background-color:#aaaaaa') + '; z-index:-1'
+                                             color: ((is_region || !regions_only) ? '#aa0000' :
+                                                     '#aaaaaa'),
+                                             order: 0
                                          };
 
                                          overall_end_time[0] = Math.max(overall_end_time[0],
@@ -130,8 +136,9 @@ class TimelineWindow extends Window {
                                          id: json.id,
                                          content: is_region ? ('<b>[R]</b> ' + json.name) :
                                              ('<b>[P/T]</b> ' + json.name + ' (' + json.pid_tid + ')'),
-                                         style: 'padding-left: ' + (level * 25) + 'px;',
-                                         showNested: false
+                                         label: is_region ? ('[R] ' + json.name) :
+                                             ('[P/T] ' + json.name + ' (' + json.pid_tid + ')'),
+                                         level: level
                                      };
 
                                      let sampled_diff = (1.0 * Math.abs(
@@ -209,46 +216,19 @@ class TimelineWindow extends Window {
                                          callchain_dict[group.id] = json.start_callchain;
                                      }
 
-                                     let offcpu_sampling_raw = parseFloat($('#linuxperf_off_cpu_scale').val());
+                                     if (is_region || !regions_only) {
+                                         for (let i = 0; i < json.off_cpu.length; i++) {
+                                             let off_cpu_item = {
+                                                 id: json.id + '_offcpu' + i,
+                                                 group: json.id,
+                                                 start: json.off_cpu[i][0],
+                                                 end: json.off_cpu[i][0] + json.off_cpu[i][1],
+                                                 color: '#0294e3',
+                                                 order: 1
+                                             };
 
-                                     if (offcpu_sampling_raw > 0) {
-                                         if (is_region || !regions_only) {
-                                             if (offcpu_sampling_raw < 1) {
-                                                 if (level === 0) {
-                                                     max_off_cpu_sampling = total_runtime;
-                                                 }
-
-                                                 if (max_off_cpu_sampling !== undefined) {
-                                                     this.inst().getData().offcpu_sampling = Math.round(Math.pow(
-                                                         1 - offcpu_sampling_raw, 3) * max_off_cpu_sampling);
-                                                 }
-                                             }
-
-                                             for (let i = 0; i < json.off_cpu.length; i++) {
-                                                 let start = json.off_cpu[i][0];
-                                                 let end = start + json.off_cpu[i][1];
-
-                                                 if (this.inst().getData().offcpu_sampling === 0 ||
-                                                     start % this.inst().getData().offcpu_sampling === 0 ||
-                                                     end % this.inst().getData().offcpu_sampling === 0 ||
-                                                     Math.floor(start / this.inst().getData().offcpu_sampling) != Math.floor(
-                                                         end / this.inst().getData().offcpu_sampling)) {
-                                                     let off_cpu_item = {
-                                                         id: json.id + '_offcpu' + i,
-                                                         group: json.id,
-                                                         type: 'background',
-                                                         content: '',
-                                                         start: json.off_cpu[i][0],
-                                                         end: json.off_cpu[i][0] + json.off_cpu[i][1],
-                                                         style: 'background-color:#0294e3'
-                                                     };
-
-                                                     item_list.push(off_cpu_item);
-                                                 }
-                                             }
+                                             item_list.push(off_cpu_item);
                                          }
-                                     } else {
-                                         this.inst().getData().show_no_off_cpu_warning = true;
                                      }
 
                                      for (let i = 0; i < json.children.length; i++) {
@@ -267,7 +247,6 @@ class TimelineWindow extends Window {
                                                            src_dict,
                                                            src_index_dict,
                                                            roofline_info,
-                                                           max_off_cpu_sampling,
                                                            regions_only);
                                      }
                                  }
@@ -288,60 +267,34 @@ class TimelineWindow extends Window {
                                   this.inst().getData().src_dict,
                                   this.inst().getData().src_index_dict,
                                   this.inst().getData().roofline_info,
-                                  undefined,
                                   this.inst()._data.regions_only);
             }
 
             if ($.isEmptyObject(this.inst().getData().general_metrics_dict)) {
                 this.inst().getContent().find('.general_analyses').off('click');
-                this.inst().getContent().find('.general_analyses').attr('class', 'disabled');
+                this.inst().getContent().find('.general_analyses').removeClass('pointer').addClass('disabled');
             } else {
                 this.inst().getContent().find('.general_analyses').on('click', (event) => {
                     this.inst().onGeneralAnalysesClick(event);
                 });
-                this.inst().getContent().find('.general_analyses').attr('class', 'pointer');
+                this.inst().getContent().find('.general_analyses').removeClass('disabled').addClass('pointer');
             }
+
+            this.inst().getContent().find('.timeline_font_decrease').on('click', (event) => {
+                this.inst().onTimelineFontSizeDecreaseClick(event);
+            });
+            this.inst().getContent().find('.timeline_font_increase').on('click', (event) => {
+                this.inst().onTimelineFontSizeIncreaseClick(event);
+            });
 
             let container = this.inst().getContent().find('.linuxperf_timeline');
             container.html('');
 
-            if (this.inst().getData().show_no_off_cpu_warning) {
-                this.inst().getContent().find('.no_off_cpu_warning').show();
-            } else if (this.inst().getData().offcpu_sampling > 0) {
-                this.inst().getContent().find('.off_cpu_sampling_period').text(this.inst().getData().offcpu_sampling);
-                this.inst().getContent().find('.off_cpu_scale_value').text(
-                    $('#linuxperf_off_cpu_scale').val());
-                this.inst().getContent().find('.off_cpu_sampling_warning').show();
-            }
-
             this.inst().getContent().find('.glossary').show();
             this.inst().hideLoading();
 
-            let timeline = new vis.Timeline(
-                container[0],
-                this.inst().getData().item_list,
-                this.inst().getData().group_list,
-                {
-                    format: {
-                        minorLabels: {
-                            millisecond:'x [ms]',
-                            second:     'X [s]',
-                            minute:     'X [s]',
-                            hour:       'X [s]',
-                            weekday:    'X [s]',
-                            day:        'X [s]',
-                            week:       'X [s]',
-                            month:      'X [s]',
-                            year:       'X [s]'
-                        }
-                    },
-                    showMajorLabels: false,
-                    min: 0,
-                    max: 2 * this.inst().getData().overall_end_time[0]
-                }
-            );
-
-            timeline.on('contextmenu', (props) => {
+            container.html('<canvas class="linuxperf_timeline_canvas"></canvas>');
+            let timelineContextMenu = (props) => {
                 if (props.group != null) {
                     let item_list = this.inst().getData().item_list;
                     let group_list = this.inst().getData().group_list;
@@ -494,7 +447,15 @@ class TimelineWindow extends Window {
                     props.event.preventDefault();
                     props.event.stopPropagation();
                 }
-            });
+            };
+
+            this.inst().getData().timeline = new CanvasTimeline(
+                container.find('.linuxperf_timeline_canvas')[0],
+                this.inst().getData().item_list,
+                this.inst().getData().group_list,
+                Math.max(1, 2 * this.inst().getData().overall_end_time[0]),
+                timelineContextMenu,
+                this.inst().getData().timeline_font_size);
         }
 
         this.inst().sendRequest({thread_tree: true},
@@ -546,6 +507,14 @@ class TimelineWindow extends Window {
 
         event.preventDefault();
         event.stopPropagation();
+    }
+
+    onTimelineFontSizeIncreaseClick(event) {
+        this.inst().getData().timeline_font_size = this.inst().getData().timeline.changeFontSize(1);
+    }
+
+    onTimelineFontSizeDecreaseClick(event) {
+        this.inst().getData().timeline_font_size = this.inst().getData().timeline.changeFontSize(-1);
     }
 
     onGeneralAnalysisMenuItemClick(event) {
