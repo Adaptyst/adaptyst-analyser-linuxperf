@@ -56,18 +56,15 @@ class TimelineWindow extends Window {
         </svg>
       </div>
       <div class="toolbar_buttons_right">
-        <!-- The SVGs below are from Google Material Icons, licensing:
-             SPDX-FileCopyrightText: Google
-             SPDX-License-Identifier: Apache-2.0 -->
         <svg xmlns="http://www.w3.org/2000/svg" class="pointer timeline_font_increase"
-             height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000">
+             data-icon="font_increase"
+             height="24px" width="24px" fill="#000000" onclick="">
           <title>Increase timeline font size</title>
-          <path d="m40-200 210-560h100l210 560h-96l-51-143H187l-51 143H40Zm176-224h168l-82-232h-4l-82 232Zm504 104v-120H600v-80h120v-120h80v120h120v80H800v120h-80Z"/>
         </svg>
         <svg xmlns="http://www.w3.org/2000/svg" class="pointer timeline_font_decrease"
-             height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000">
+             data-icon="font_decrease"
+             height="24px" width="24px" fill="#000000" onclick="">
           <title>Decrease timeline font size</title>
-          <path d="m40-200 210-560h100l210 560h-96l-51-143H187l-51 143H40Zm176-224h168l-82-232h-4l-82 232Zm384-16v-80h320v80H600Z"/>
         </svg>
       </div>
     </div>
